@@ -1,0 +1,12 @@
+pygame
+colour
+pyaudio
+ipython
+pyglet # remove pygame?
+aubio
+#madmom requirements
+numpy
+scipy
+cython
+pyaudio
+pyfftw
