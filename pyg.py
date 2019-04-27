@@ -37,7 +37,7 @@ class AudioProcessor(object):
                         frames_per_buffer = self.CHUNK,
                         stream_callback=self.callback)
 
-        self.a_tempo = aubio.tempo("default", self.CHUNK, self.hop_s, self.RATE)
+        self.a_tempo = aubio.tempo("specflux", self.CHUNK, self.hop_s, self.RATE)
         self.a_pitch = aubio.pitch("default", self.CHUNK, self.hop_s, self.RATE)
         self.tolerance = 0.8
         self.a_pitch.set_tolerance(self.tolerance)
@@ -46,6 +46,9 @@ class AudioProcessor(object):
         self.average_pitch = 0
         self.average_pitch_samples = 0
         self.last_average = 0
+        self.scheduled = False
+        self.colors = None
+        self.pitch_range = None
         stream.start_stream()
 
     def reset(self):
@@ -66,6 +69,42 @@ class AudioProcessor(object):
                 print("Found!{}".format(self.p.get_device_info_by_index(i)['name']))
                 return i
 
+    def reschedule(self, *args):
+        # this means we are on a beat!
+        if self.scheduled:
+            clock.unschedule(self.add_rays)
+            clock.unschedule(self.reschedule)
+        self.scheduled = True
+        bpm = self.a_tempo.get_bpm()
+        # schedule wants 1 = 1 time per second, 0.5 = 2 times per second
+        # to get from bpm to scheduling an event for every beat...
+        # calculate beats per second
+        bps = bpm / 60
+        clock.schedule(self.add_rays, 1 / bps)
+
+
+        # now retune the colors
+        self.pitch_range = self.highest_pitch - self.lowest_pitch
+        if self.pitch_range < 3:
+            self.pitch_range = 360
+        #print("High:{}, low:{}".format( self.highest_pitch, self.lowest_pitch))
+        r_b = [color for color in colour.Color("Red").range_to(colour.Color("Green"), int(self.pitch_range/3))]
+        b_g = [color for color in colour.Color("Green").range_to(colour.Color("Blue"), int(self.pitch_range/3))]
+        g_r = [color for color in colour.Color("Blue").range_to(colour.Color("Red"), int(self.pitch_range/3))]
+        self.colors =  r_b+b_g+g_r
+
+        clock.schedule(self.reschedule, 1)
+
+    def add_rays(self, *args):
+        for i in range(1):
+            pitch_index = int(self.average_pitch - self.lowest_pitch)
+            if pitch_index > len(self.colors):
+                pitch_index = len(self.colors) - 1
+                #print("crap")
+            if pitch_index < 0:
+                pitch_index = 0
+            self.source_body.add_ray(color=self.colors[pitch_index])
+
     def callback(self, in_data, frame_count, time_info, status):
         # dir of a_tempo: ['__call__', '__class__', '__delattr__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', 'buf_size', 'get_bpm', 'get_confidence', 'get_delay', 'get_delay_ms', 'get_delay_s', 'get_last', 'get_last_ms', 'get_last_s', 'get_last_tatum', 'get_period', 'get_period_s', 'get_silence', 'get_threshold', 'hop_size', 'method', 'samplerate', 'set_delay', 'set_delay_ms', 'set_delay_s', 'set_silence', 'set_tatum_signature', 'set_threshold']
         # pitch is typically in the 0 - 20k range
@@ -77,13 +116,8 @@ class AudioProcessor(object):
             self.average_pitch_samples+=1
         is_beat = self.a_tempo(ret)
         if is_beat:
-            print(self.a_tempo.get_bpm())
-            self.source_body.add_ray()
-            self.source_body.add_ray()
-            self.source_body.add_ray()
-            self.source_body.add_ray()
-            self.source_body.add_ray()
-            self.source_body.add_ray()
+            if not self.scheduled:
+                self.reschedule()
             if self.average_pitch_samples > 0:
                 average_pitch = self.average_pitch / self.average_pitch_samples
                 self.last_average = average_pitch
@@ -115,13 +149,14 @@ class Body(object):
     def get_color(self):
         return self.colors[int(self.degree)]
 
-    def add_ray(self, degree=None):
+    def add_ray(self, degree=None, color=None):
         if degree:
             self.degree = degree
-        color = None # TODO COLOR
+        if not color:
+            color = self.get_color()
         color = self.get_color()
-        x_slope = (self.radius * cos(radians(self.degree)))/100
-        y_slope = (self.radius * sin(radians(self.degree)))/100
+        x_slope = (self.radius * cos(radians(self.degree)))/60
+        y_slope = (self.radius * sin(radians(self.degree)))/60
         x_point = self.radius * cos(radians(self.degree)) + self.x
         y_point = self.radius * sin(radians(self.degree)) + self.y
         amplitude = r.randint(10, 100)
@@ -230,7 +265,7 @@ pyglet.app.run()
 
 
 # TODOS
-# Adjust ray creation to look better
+# Adjust ray creation to look better --> Set it to 2* BPM!
 # tune colors to pitch
 # randomly create bodies
 # intersect with those bodies
