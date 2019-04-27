@@ -7,6 +7,12 @@ import aubio
 import colour
 from math import radians, sin, cos
 import numpy as np
+import random
+
+r = random.Random()
+
+WIDTH = 1280
+HEIGHT = 780
 
 
 
@@ -71,7 +77,12 @@ class AudioProcessor(object):
             self.average_pitch_samples+=1
         is_beat = self.a_tempo(ret)
         if is_beat:
-            #print(self.a_tempo.get_bpm())
+            print(self.a_tempo.get_bpm())
+            self.source_body.add_ray()
+            self.source_body.add_ray()
+            self.source_body.add_ray()
+            self.source_body.add_ray()
+            self.source_body.add_ray()
             self.source_body.add_ray()
             if self.average_pitch_samples > 0:
                 average_pitch = self.average_pitch / self.average_pitch_samples
@@ -94,43 +105,53 @@ class Body(object):
         self.y = y
         self.radius = radius
         self.degree = degree
-        self.rays = {}
+        self.rays = []
         self.vertex_list = None
+        r_b = [color for color in colour.Color("Red").range_to(colour.Color("Green"), 120)]
+        b_g = [color for color in colour.Color("Green").range_to(colour.Color("Blue"), 120)]
+        g_r = [color for color in colour.Color("Blue").range_to(colour.Color("Red"), 120)]
+        self.colors =  r_b+b_g+g_r
+
+    def get_color(self):
+        return self.colors[int(self.degree)]
 
     def add_ray(self, degree=None):
         if degree:
             self.degree = degree
-        if self.degree in self.rays:
-            if self.rays[self.degree].active:
-                return
-            else:
-                self.rays.pop(degree)
         color = None # TODO COLOR
-        color = colour.Color("Blue")
-        x_slope = (self.radius * cos(radians(self.degree)))/3
-        y_slope = (self.radius * sin(radians(self.degree)))/3
+        color = self.get_color()
+        x_slope = (self.radius * cos(radians(self.degree)))/100
+        y_slope = (self.radius * sin(radians(self.degree)))/100
         x_point = self.radius * cos(radians(self.degree)) + self.x
         y_point = self.radius * sin(radians(self.degree)) + self.y
-        self.rays[self.degree] = Ray(x_point, y_point, x_point + x_slope, y_point + y_slope, color)
-        self.degree = self.degree + 5
+        amplitude = r.randint(10, 100)
+        self.rays.append(Ray(x_point, y_point, x_point + x_slope, y_point + y_slope, amplitude, color))
+        self.degree = self.degree + 1
+        if self.degree == 360:
+            self.degree = 0
 
-    def get_vertices(self):
-        rays = [ray.get_coordinates() for ray in self.rays.values()]
+    def get_vertices_and_colors(self):
+        rays = [ray for ray in self.rays] # snapshot
+
+        rays_c = [ray.get_coordinates() for ray in rays]
+        colors = [ray.get_colors() for ray in rays]
         ray_coords = []
-        [ray_coords.extend(ray) for ray in rays]
-        return ray_coords
-
-    def get_colors(self):
-        rays = [ray.get_coordinates() for ray in self.rays.values()]
-        colors = [ray.get_colors() for ray in self.rays.values()]
+        [ray_coords.extend(ray) for ray in rays_c]
         ray_colors = []
         [ray_colors.extend(color) for color in colors]
-        return ray_colors
+        return ray_coords, ray_colors
+
 
     def update_vertex_list(self, *args):
-        [ray.update() for ray in self.rays.values()]
-        ray_coords = self.get_vertices()
-        ray_colors = self.get_colors()
+        remove = []
+        for ray in self.rays:
+            if not ray.active:
+                remove.append(ray)
+            else:
+                ray.update()
+        for ray in remove:
+            self.rays.remove(ray)
+        ray_coords, ray_colors = self.get_vertices_and_colors()
         self.vertex_list = pyglet.graphics.vertex_list(int(len(ray_coords) / 2),
                         ('v2f', ray_coords),
                         ('c3B', ray_colors))
@@ -142,13 +163,15 @@ def scale_color(color):
     
 class Ray(object):
 
-    def __init__(self, x1, y1, x2, y2, color1, color2=None):
+    def __init__(self, x1, y1, x2, y2, amplitude, color1, color2=None):
         # Colors are expected to colour objects ig...
         self.active = True # TODO
         self.x1 = x1
         self.y1 = y1
         self.x2 = x2
         self.y2 = y2
+        self.amplitude = amplitude
+        self.counter = 0  
         self.x_slope = x2-x1
         self.y_slope = y2-y1
         self.color1 = color1
@@ -164,24 +187,22 @@ class Ray(object):
     def update(self):
         self.x2 = self.x2 + self.x_slope
         self.y2 = self.y2 + self.y_slope
-        # need termination logic
+        if self.counter == self.amplitude:
+            self.x1 = self.x1 + self.x_slope
+            self.y1 = self.y1 + self.y_slope
+
+        if not 0 < self.x2 <= WIDTH or not 0 < self.y2 <= HEIGHT:
+            self.active = False
+        self.counter+=1
+        self.counter = min(self.amplitude, self.counter)
 
 
-vertex_list = pyglet.graphics.vertex_list(2,
-    ('v2f', (10, 15, 30, 35)),
-    ('c3B', (0, 0, 255, 0, 255, 0))
-)
-vertex_list2 = pyglet.graphics.vertex_list(2,
-    ('v2f', (10.0, 40.0, 30.0, 60.0)),
-    ('c3B', (0, 0, 255, 0, 255, 0))
-)
-
-
-window = pyglet.window.Window(vsync=0)
-b = Body(200, 200, 20)
+window = pyglet.window.Window(WIDTH, HEIGHT, vsync=False)
+b = Body(WIDTH/2, HEIGHT/2, 20)
 a = AudioProcessor(b)
 
-clock.schedule(b.update_vertex_list)
+clock.schedule(b.update_vertex_list) # remember this can take a delay
+# schedule something that resets the color range every ... ???
 
 @window.event
 def on_draw():
@@ -205,3 +226,12 @@ def on_mouse_press(x, y, button, modifiers):
     if button == mouse.LEFT:
         print('The left mouse button was pressed.')
 pyglet.app.run()
+
+
+
+# TODOS
+# Adjust ray creation to look better
+# tune colors to pitch
+# randomly create bodies
+# intersect with those bodies
+# have those bodies rebroadcast
