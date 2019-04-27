@@ -3,8 +3,6 @@ from math import radians, sin, cos
 import random
 r = random.Random()
 from ray import Ray
-# !!!! TODO
-import pyglet
 class Body(object):
 
     def __init__(self, x, y, radius, degree=0):
@@ -60,7 +58,5 @@ class Body(object):
         for ray in remove:
             self.rays.remove(ray)
         ray_coords, ray_colors = self.get_vertices_and_colors()
-        # TODO REMOVE
-        self.vertex_list = pyglet.graphics.vertex_list(int(len(ray_coords) / 2),
-                        ('v2f', ray_coords),
-                        ('c3B', ray_colors))
+        self.ray_coords = ray_coords
+        self.ray_colors = ray_colors

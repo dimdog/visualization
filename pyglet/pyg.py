@@ -17,14 +17,37 @@ b = Body(WIDTH/2, HEIGHT/2, 20)
 # TODO create rebroadcaster bodies
 a = AudioProcessor(b)
 
-clock.schedule(b.update_vertex_list) # remember this can take a delay
+class BodyManager(object):
+
+    def __init__(self, *bodies):
+        self.bodies = bodies
+
+    def gen_vertex_list(self):
+        ray_coords = []
+        ray_colors = []
+        for b in self.bodies:
+            ray_coords.extend(b.ray_coords)
+            ray_colors.extend(b.ray_colors)
+
+        self.vertex_list = pyglet.graphics.vertex_list(int(len(ray_coords) / 2),
+                        ('v2f', ray_coords),
+                        ('c3B', ray_colors))
+
+    def update_vertex_lists(self, *args):
+        for b in self.bodies:
+            b.update_vertex_list()
+        self.gen_vertex_list()
+
+
+bm = BodyManager(b)
+clock.schedule(bm.update_vertex_lists) # remember this can take a delay
 # schedule something that resets the color range every ... ???
 
 @window.event
 def on_draw():
     window.clear()
-    if b.vertex_list:
-        b.vertex_list.draw(pyglet.gl.GL_LINES)
+    if bm.vertex_list:
+        bm.vertex_list.draw(pyglet.gl.GL_LINES)
 
 @window.event
 def on_key_press(symbol, modifiers):
