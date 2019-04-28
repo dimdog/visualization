@@ -2,9 +2,8 @@ import pyaudio
 import aubio
 import colour
 import numpy as np
+import redis
 
-# !!!!! TODO
-from pyglet import clock
 
 class AudioProcessor(object):
     FORMAT = pyaudio.paFloat32
@@ -14,9 +13,9 @@ class AudioProcessor(object):
     hop_s = CHUNK // 2  # hop size
     active = None
 
-    def __init__(self, source_body):
+    def __init__(self):
+        self.redis = redis.StrictRedis(host="localhost", port=6379, password="", decode_responses=True)
         self.p = pyaudio.PyAudio()
-        self.source_body = source_body
         stream = self.p.open(format=self.FORMAT,
                         channels=self.CHANNELS,
                         rate=self.RATE,
@@ -36,7 +35,6 @@ class AudioProcessor(object):
         self.average_pitch = 0
         self.average_pitch_samples = 0
         self.last_average = 0
-        self.scheduled = False
         self.colors = None
         self.pitch_range = None
         stream.start_stream()
@@ -61,16 +59,11 @@ class AudioProcessor(object):
 
     def reschedule(self, *args):
         # this means we are on a beat!
-        if self.scheduled:
-            clock.unschedule(self.add_rays)
-            clock.unschedule(self.reschedule)
-        self.scheduled = True
         bpm = self.a_tempo.get_bpm()
         # schedule wants 1 = 1 time per second, 0.5 = 2 times per second
         # to get from bpm to scheduling an event for every beat...
         # calculate beats per second
         bps = bpm / 60
-        clock.schedule(self.add_rays, 1 / bps)
 
 
         # now retune the colors
@@ -83,9 +76,8 @@ class AudioProcessor(object):
         g_r = [color for color in colour.Color("Blue").range_to(colour.Color("Red"), int(self.pitch_range/3))]
         self.colors =  r_b+b_g+g_r
 
-        clock.schedule(self.reschedule, 1)
-
     def add_rays(self, *args):
+        # deprecated, but maybe some useful logic in here
         for i in range(1):
             pitch_index = int(self.average_pitch - self.lowest_pitch)
             if pitch_index > len(self.colors):
@@ -93,7 +85,6 @@ class AudioProcessor(object):
                 #print("crap")
             if pitch_index < 0:
                 pitch_index = 0
-            self.source_body.add_ray(color=self.colors[pitch_index])
 
     def callback(self, in_data, frame_count, time_info, status):
         # dir of a_tempo: ['__call__', '__class__', '__delattr__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', 'buf_size', 'get_bpm', 'get_confidence', 'get_delay', 'get_delay_ms', 'get_delay_s', 'get_last', 'get_last_ms', 'get_last_s', 'get_last_tatum', 'get_period', 'get_period_s', 'get_silence', 'get_threshold', 'hop_size', 'method', 'samplerate', 'set_delay', 'set_delay_ms', 'set_delay_s', 'set_silence', 'set_tatum_signature', 'set_threshold']
@@ -106,8 +97,9 @@ class AudioProcessor(object):
             self.average_pitch_samples+=1
         is_beat = self.a_tempo(ret)
         if is_beat:
-            if not self.scheduled:
-                self.reschedule()
+            # TODO send message to add a ray with color (we can always bump this up later)
+            #self.source_body.add_ray(color=self.colors[pitch_index])
+            self.redis.lpush("beat_queue", "Beat")
             if self.average_pitch_samples > 0:
                 average_pitch = self.average_pitch / self.average_pitch_samples
                 self.last_average = average_pitch
@@ -121,3 +113,10 @@ class AudioProcessor(object):
                 #print("last Pitch:{} highest Pitch:{} lowest Pitch:{}".format(self.last_average, self.highest_pitch, self.lowest_pitch))
         return (in_data, pyaudio.paContinue)
 
+
+if __name__ == "__main__":
+
+    a = AudioProcessor()
+    import time
+    while True:
+        time.sleep(0.1)

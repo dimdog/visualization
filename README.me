@@ -1,0 +1,33 @@
+NEXT STEPS:
+
+continue to turn this into a multithreaded affair
+
+3 processes
+
+~1) Audioprocessor connects the wires, runs the audio, doesn't fucking crash. Puts a signal to a redis queue on beat with information~
+2)~ body manager loops and bodies listen and whatever,~ they output a list of ray and color coords to redis on a regular basis
+3) game checks redis every loop, assembles vertex list and draws
+
+To run now:
+in one terminal: `redis-server` to start the redis server
+in another terminal: `python audioprocessor.py` - and set your sound to output through Soundflower (2 ch)
+in another terminal `python body.py 1280 720` - sets the bounds of the body simulation and starts it listening to the output from the audio processor
+in a final terminal `python pyg.py 1280 720` - sets the bounds of the window to match the body simulation
+
+
+Outline:
+    Inspiration
+    Initial efforts - let's find a graphics tool!
+        Pygame - known and popular
+        Fabric - interesting, but audio...omg...
+        Pyglet - low level enough, some quirks, but we can do audio
+    Audio, by the way
+        Fuck
+        LibROSA
+        Aubio to the rescue
+    Hitting limits:
+        Refactoring (04/27/19)
+        Multithreading - Multiprocessing, ZMQ?
+        Redis MOFO
+        
+        

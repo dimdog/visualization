@@ -4,8 +4,8 @@ from pyglet.window import mouse
 from pyglet import clock
 import colour
 from math import radians, sin, cos
+import redis
 
-from audioprocessor import AudioProcessor
 from body import Body
 
 
@@ -13,41 +13,23 @@ WIDTH = 1280
 HEIGHT = 780
 
 window = pyglet.window.Window(WIDTH, HEIGHT, vsync=False)
-b = Body(WIDTH/2, HEIGHT/2, 20)
-# TODO create rebroadcaster bodies
-a = AudioProcessor(b)
 
-class BodyManager(object):
+redis = redis.StrictRedis(host="localhost", port=6379, password="", decode_responses=True)
 
-    def __init__(self, *bodies):
-        self.bodies = bodies
-
-    def gen_vertex_list(self):
-        ray_coords = []
-        ray_colors = []
-        for b in self.bodies:
-            ray_coords.extend(b.ray_coords)
-            ray_colors.extend(b.ray_colors)
-
-        self.vertex_list = pyglet.graphics.vertex_list(int(len(ray_coords) / 2),
-                        ('v2f', ray_coords),
-                        ('c3B', ray_colors))
-
-    def update_vertex_lists(self, *args):
-        for b in self.bodies:
-            b.update_vertex_list()
-        self.gen_vertex_list()
-
-
-bm = BodyManager(b)
-clock.schedule(bm.update_vertex_lists) # remember this can take a delay
-# schedule something that resets the color range every ... ???
 
 @window.event
-def on_draw():
+def on_draw(*args):
     window.clear()
-    if bm.vertex_list:
-        bm.vertex_list.draw(pyglet.gl.GL_LINES)
+    msg = redis.get("vertex_list")
+    if msg:
+        ray_coords_raw, ray_colors_raw = msg.split("|")
+        ray_coords = eval(ray_coords_raw) # I solemnly swear I am up to no good
+        ray_colors = eval(ray_colors_raw) # I solemnly swear I am up to no good
+
+        vertex_list = pyglet.graphics.vertex_list(int(len(ray_coords) / 2),
+                        ('v2f', ray_coords),
+                        ('c3B', ray_colors))
+        vertex_list.draw(pyglet.gl.GL_LINES)
 
 @window.event
 def on_key_press(symbol, modifiers):
@@ -63,6 +45,7 @@ def on_mouse_press(x, y, button, modifiers):
     if button == mouse.LEFT:
         print('The left mouse button was pressed.')
 
+clock.schedule(on_draw)
 pyglet.app.run()
 
 

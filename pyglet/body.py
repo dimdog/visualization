@@ -3,6 +3,35 @@ from math import radians, sin, cos
 import random
 r = random.Random()
 from ray import Ray
+import redis
+
+class BodyManager(object):
+
+    def __init__(self, main_body, *bodies):
+        self.main_body = main_body
+        self.bodies = bodies
+        self.redis = redis.StrictRedis(host="localhost", port=6379, password="", decode_responses=True)
+        self.redis.delete("beat_queue") # clears so we don't have a whole history to fight through
+
+    def gen_vertex_list(self):
+        ray_coords = []
+        ray_colors = []
+        for b in [self.main_body, *self.bodies]:
+            ray_coords.extend(b.ray_coords)
+            ray_colors.extend(b.ray_colors)
+
+        self.redis.set("vertex_list", "{}|{}".format(ray_coords, ray_colors))
+
+    def update_vertex_lists(self, *args):
+        # listen here for the message
+        msg = self.redis.rpop("beat_queue")
+        while msg:
+            self.main_body.add_ray()
+            msg = self.redis.rpop("beat_queue")
+        for b in [self.main_body, *self.bodies]:
+            b.update_vertex_list()
+        self.gen_vertex_list()
+
 class Body(object):
 
     def __init__(self, x, y, radius, degree=0):
@@ -60,3 +89,14 @@ class Body(object):
         ray_coords, ray_colors = self.get_vertices_and_colors()
         self.ray_coords = ray_coords
         self.ray_colors = ray_colors
+
+if __name__ == "__main__":
+    # need to get height and width as args
+    WIDTH=1280
+    HEIGHT=720
+    b = Body(WIDTH/2, HEIGHT/2, 20)
+    bm = BodyManager(b)
+    while True:
+        bm.update_vertex_lists()
+
+
