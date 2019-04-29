@@ -26,6 +26,7 @@ class Ray(object):
         return (*scale_color(self.color1), *scale_color(self.color2))
 
     def update(self):
+        # update this to use "magnitude" and have the ray extend until it reaches magnitude
         self.x2 = self.x2 + self.x_slope
         self.y2 = self.y2 + self.y_slope
         if self.counter == self.amplitude:

@@ -20,7 +20,7 @@ class AudioProcessor(object):
                         channels=self.CHANNELS,
                         rate=self.RATE,
                         input=True,
-                        output=True,
+                        output=False,
                         input_device_index = self.get_input_device_index(),
                         output_device_index = self.get_output_device_index(),
                         frames_per_buffer = self.CHUNK,
@@ -28,6 +28,11 @@ class AudioProcessor(object):
 
         self.a_tempo = aubio.tempo("specflux", self.CHUNK, self.hop_s, self.RATE)
         self.a_pitch = aubio.pitch("default", self.CHUNK, self.hop_s, self.RATE)
+        n_filters = 40 # required
+        n_coeffs = 13 # I wonder if i made this 1....
+        self.a_pvoc = aubio.pvoc(self.CHUNK, self.hop_s)
+        self.a_mfcc = aubio.mfcc(self.CHUNK, n_filters, n_coeffs, self.RATE)
+
         self.tolerance = 0.8
         self.a_pitch.set_tolerance(self.tolerance)
         self.highest_pitch = 0
@@ -54,6 +59,7 @@ class AudioProcessor(object):
     def get_output_device_index(self):
         for i in range(self.p.get_device_count()):
             if self.p.get_device_info_by_index(i)['name'] == 'Built-in Output':
+            #if self.p.get_device_info_by_index(i)['name'] == 'AUSDOM M04S':
                 print("Found!{}".format(self.p.get_device_info_by_index(i)['name']))
                 return i
 
@@ -96,6 +102,9 @@ class AudioProcessor(object):
             self.average_pitch+=pitch
             self.average_pitch_samples+=1
         is_beat = self.a_tempo(ret)
+        spec = self.a_pvoc(ret)
+        mfcc = self.a_mfcc(spec)
+        print(sum(mfcc))
         if is_beat:
             # TODO send message to add a ray with color (we can always bump this up later)
             #self.source_body.add_ray(color=self.colors[pitch_index])
