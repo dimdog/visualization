@@ -104,7 +104,7 @@ class AudioProcessor(object):
         is_beat = self.a_tempo(ret)
         spec = self.a_pvoc(ret)
         mfcc = self.a_mfcc(spec)
-        print(sum(mfcc))
+        print(sum(mfcc[1:])) # first coefficient is a constant?
         if is_beat:
             # TODO send message to add a ray with color (we can always bump this up later)
             #self.source_body.add_ray(color=self.colors[pitch_index])

@@ -84,11 +84,11 @@ class Body(object):
             new_hue = color1.get_hue()
             average_hue = ((current_hue * self.energy) + (new_hue * magnitude))/(self.energy + magnitude)
             self.energy_color.set_hue(average_hue)
-        self.energy += magnitude * 10
+        self.energy += magnitude * 3
 
 
 
-    def add_ray(self, degree=None, color=None, magnitude=None):
+    def add_ray(self, degree=None, color=None, magnitude=None, bounce=False, decay=False):
         if degree:
             self.degree = degree
         if not color:
@@ -100,7 +100,7 @@ class Body(object):
         y_point = self.radius * sin(radians(self.degree)) + self.y
         if not magnitude:
             magnitude = r.randint(self.MIN_MAGNITUDE, self.MAX_MAGNITUDE)
-        self.rays.append(Ray(x_point, y_point, x_point + x_slope, y_point + y_slope, magnitude, color))
+        self.rays.append(Ray(x_point, y_point, x_point + x_slope, y_point + y_slope, magnitude, color, bounce=bounce, decay=decay))
         self.degree = self.degree + 1
         if self.degree == 360:
             self.degree = 0
@@ -123,7 +123,7 @@ class Body(object):
                 magnitude = self.energy
             self.energy -= magnitude
             # TODO make a range +/- 10 hue on the current energy color and randomly pick from it
-            self.add_ray(color=self.energy_color, magnitude=magnitude)
+            self.add_ray(color=self.energy_color, magnitude=magnitude, bounce=True, decay=True)
 
     def update_vertex_list(self, *args):
         self.expend_energy()

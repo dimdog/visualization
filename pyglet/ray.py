@@ -1,18 +1,22 @@
+from math import sqrt
 
 def scale_color(color):
     rgb_color = color.get_rgb()
     return tuple(int(elem * 255) for elem in rgb_color)
 
 class Ray(object):
+    decay_rate = 0.01 # percentage decay rate
 
-    def __init__(self, x1, y1, x2, y2, amplitude, color1, color2=None):
+    def __init__(self, x1, y1, x2, y2, magnitude, color1, color2=None, bounce=False, decay=False):
         # Colors are expected to colour objects
+        self.decay = decay
+        self.bounce = bounce
         self.active = True
         self.x1 = x1
         self.y1 = y1
         self.x2 = x2
         self.y2 = y2
-        self.amplitude = amplitude
+        self.magnitude = magnitude
         self.counter = 0
         self.x_slope = x2-x1
         self.y_slope = y2-y1
@@ -25,19 +29,20 @@ class Ray(object):
     def get_colors(self):
         return (*scale_color(self.color1), *scale_color(self.color2))
 
+
     def update(self):
-        # update this to use "magnitude" and have the ray extend until it reaches magnitude
+        #decay is busted
+        if decay:
+            pass
+
         self.x2 = self.x2 + self.x_slope
         self.y2 = self.y2 + self.y_slope
-        if self.counter == self.amplitude:
+        current_magnitude = sqrt((abs(self.x2 - self.x1) ** 2) + (abs(self.y2 - self.y1) ** 2))
+        if current_magnitude >= self.magnitude:
             self.x1 = self.x1 + self.x_slope
             self.y1 = self.y1 + self.y_slope
 
-        # check for collisions
-        # check distance of (x2, y2) from the center of every body, if distance is < radius its a hit
-        # MOVE ELSEWHERE TODO
+        # TODO implement bounce (negate slope when we hit the wall...but i'd love to have it sink into / grow out of the wall
         #if not 0 < self.x2 <= WIDTH or not 0 < self.y2 <= HEIGHT:
         if not 0 < self.x2 <= 1280 or not 0 < self.y2 <= 720:
             self.active = False
-        self.counter+=1
-        self.counter = min(self.amplitude, self.counter)
