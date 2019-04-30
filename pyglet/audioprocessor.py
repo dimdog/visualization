@@ -12,6 +12,11 @@ class AudioProcessor(object):
     CHUNK = 1024
     hop_s = CHUNK // 2  # hop size
     active = None
+    
+    detect_pitch = False
+    detect_onset = True
+    detect_beat = False
+    detect_mfcc = True
 
     def __init__(self):
         self.redis = redis.StrictRedis(host="localhost", port=6379, password="", decode_responses=True)
@@ -26,8 +31,10 @@ class AudioProcessor(object):
                         frames_per_buffer = self.CHUNK,
                         stream_callback=self.callback)
 
+        self.a_onset = aubio.onset("default", self.CHUNK, self.hop_s, self.RATE)
         self.a_tempo = aubio.tempo("specflux", self.CHUNK, self.hop_s, self.RATE)
         self.a_pitch = aubio.pitch("default", self.CHUNK, self.hop_s, self.RATE)
+        self.a_notes = aubio.notes("default", self.CHUNK, self.hop_s, self.RATE)
         n_filters = 40 # required
         n_coeffs = 13 # I wonder if i made this 1....
         self.a_pvoc = aubio.pvoc(self.CHUNK, self.hop_s)
@@ -97,29 +104,43 @@ class AudioProcessor(object):
         # pitch is typically in the 0 - 20k range
         ret = np.fromstring(in_data, dtype=np.float32)
         ret = ret[0:self.hop_s]
-        pitch = self.a_pitch(ret)[0]
-        if pitch > 0 and self.a_pitch.get_confidence() > 0:
-            self.average_pitch+=pitch
-            self.average_pitch_samples+=1
-        is_beat = self.a_tempo(ret)
-        spec = self.a_pvoc(ret)
-        mfcc = self.a_mfcc(spec)
-        print(sum(mfcc[1:])) # first coefficient is a constant?
-        if is_beat:
-            # TODO send message to add a ray with color (we can always bump this up later)
-            #self.source_body.add_ray(color=self.colors[pitch_index])
-            self.redis.lpush("beat_queue", "Beat")
-            if self.average_pitch_samples > 0:
-                average_pitch = self.average_pitch / self.average_pitch_samples
-                self.last_average = average_pitch
-                self.highest_pitch = max([self.highest_pitch, average_pitch])
-                self.lowest_pitch = min([self.lowest_pitch, average_pitch])
-                #print("average Pitch:{} highest Pitch:{} lowest Pitch:{}".format(average_pitch, self.highest_pitch, self.lowest_pitch))
-                self.average_pitch_samples = 0
-                self.average_pitch = 0
-            else:
-                pass
-                #print("last Pitch:{} highest Pitch:{} lowest Pitch:{}".format(self.last_average, self.highest_pitch, self.lowest_pitch))
+
+        note = self.a_notes(ret)
+        if self.detect_onset:
+            onset = self.a_onset(ret)[0]
+            if onset > 0:
+                self.redis.lpush("beat_queue", "Beat")
+
+        if self.detect_pitch:
+            pitch = self.a_pitch(ret)[0]
+            if pitch > 0 and self.a_pitch.get_confidence() > 0:
+                self.average_pitch+=pitch
+                self.average_pitch_samples+=1
+        if self.detect_mfcc:
+            spec = self.a_pvoc(ret)
+            mfcc = self.a_mfcc(spec)
+            try:
+                val = int(sum(mfcc[1:]))  # first coefficient is a constant?
+                self.redis.lpush("beat_queue", val)
+            except:
+                print("NaN?")
+        if self.detect_beat:
+            is_beat = self.a_tempo(ret)
+            if is_beat:
+                # TODO send message to add a ray with color (we can always bump this up later)
+                #self.source_body.add_ray(color=self.colors[pitch_index])
+                self.redis.lpush("beat_queue", "Beat")
+                if self.average_pitch_samples > 0:
+                    average_pitch = self.average_pitch / self.average_pitch_samples
+                    self.last_average = average_pitch
+                    self.highest_pitch = max([self.highest_pitch, average_pitch])
+                    self.lowest_pitch = min([self.lowest_pitch, average_pitch])
+                    #print("average Pitch:{} highest Pitch:{} lowest Pitch:{}".format(average_pitch, self.highest_pitch, self.lowest_pitch))
+                    self.average_pitch_samples = 0
+                    self.average_pitch = 0
+                else:
+                    pass
+                    #print("last Pitch:{} highest Pitch:{} lowest Pitch:{}".format(self.last_average, self.highest_pitch, self.lowest_pitch))
         return (in_data, pyaudio.paContinue)
 
 

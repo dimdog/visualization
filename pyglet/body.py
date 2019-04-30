@@ -12,6 +12,11 @@ class BodyManager(object):
         self.bodies = bodies
         self.redis = redis.StrictRedis(host="localhost", port=6379, password="", decode_responses=True)
         self.redis.delete("beat_queue") # clears so we don't have a whole history to fight through
+        self.threshold = 7
+        self.counter = 0
+        self.MODE = "MFCC+BEAT"
+        #self.MODE = "BEAT"
+        #self.MODE = "MFCC"
 
     def gen_vertex_list(self):
         ray_coords = []
@@ -29,17 +34,37 @@ class BodyManager(object):
                 return b
         return None
 
+
     def update_vertex_lists(self, *args):
         # listen here for the message
         msg = self.redis.rpop("beat_queue")
         while msg:
-            self.main_body.add_ray()
-            self.main_body.add_ray()
-            self.main_body.add_ray()
-            self.main_body.add_ray()
-            self.main_body.add_ray()
-            self.main_body.add_ray()
+            if self.MODE == "MFCC":
+                try:
+                    count = int(msg)
+                    self.counter += count
+                    while self.counter >= self.threshold:
+                        self.main_body.add_ray()
+                        self.counter -= self.threshold
+                except:
+                    pass
+            elif self.MODE == "BEAT":
+                if msg == "BEAT":
+                    self.main_body.add_ray()
+                    self.main_body.add_ray()
+                    self.main_body.add_ray()
+                    self.main_body.add_ray()
+                    self.main_body.add_ray()
+            elif self.MODE == "MFCC+BEAT":
+                if msg == "Beat":
+                    while self.counter >= self.threshold:
+                        self.main_body.add_ray()
+                        self.counter -= self.threshold
+                else:
+                    count = int(msg)
+                    self.counter += count
             msg = self.redis.rpop("beat_queue")
+
         for b in [self.main_body, *self.bodies]:
             b.update_vertex_list()
             for ray in b.rays:
