@@ -9,6 +9,7 @@ class Ray(object):
 
     def __init__(self, x1, y1, x2, y2, magnitude, color1, color2=None, bounce=False, decay=False):
         # Colors are expected to colour objects
+        # TODO turn this thing into something that calculates the next "step" based on slope and stepping, instead of pushing the slope...
         self.decay = decay
         self.bounce = bounce
         self.active = True
@@ -32,7 +33,7 @@ class Ray(object):
 
     def update(self):
         #decay is busted
-        if decay:
+        if self.decay:
             pass
 
         self.x2 = self.x2 + self.x_slope

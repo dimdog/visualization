@@ -20,7 +20,7 @@ class AudioProcessor(object):
                         channels=self.CHANNELS,
                         rate=self.RATE,
                         input=True,
-                        output=False,
+                        output=True,
                         input_device_index = self.get_input_device_index(),
                         output_device_index = self.get_output_device_index(),
                         frames_per_buffer = self.CHUNK,
