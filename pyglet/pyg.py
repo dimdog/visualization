@@ -17,6 +17,12 @@ window = pyglet.window.Window(WIDTH, HEIGHT, vsync=False)
 redis = redis.StrictRedis(host="localhost", port=6379, password="", decode_responses=True)
 
 
+class VertexListHolder:
+    def __init__(self, vertex_list):
+        self.vertex_list = vertex_list
+
+vlh = VertexListHolder(None)
+
 @window.event
 def on_draw(*args):
     window.clear()
@@ -25,11 +31,13 @@ def on_draw(*args):
         ray_coords_raw, ray_colors_raw = msg.split("|")
         ray_coords = eval(ray_coords_raw) # I solemnly swear I am up to no good
         ray_colors = eval(ray_colors_raw) # I solemnly swear I am up to no good
+        if vlh.vertex_list:
+            vlh.vertex_list.delete()
 
-        vertex_list = pyglet.graphics.vertex_list(int(len(ray_coords) / 2),
+        vlh.vertex_list = pyglet.graphics.vertex_list(int(len(ray_coords) / 2),
                         ('v2f', ray_coords),
                         ('c3B', ray_colors))
-        vertex_list.draw(pyglet.gl.GL_LINES)
+        vlh.vertex_list.draw(pyglet.gl.GL_LINES)
 
 @window.event
 def on_key_press(symbol, modifiers):

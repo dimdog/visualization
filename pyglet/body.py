@@ -168,7 +168,7 @@ if __name__ == "__main__":
     # need to get height and width as args
     WIDTH=1280
     HEIGHT=720
-    b = Body(WIDTH/2, HEIGHT/2, 20)
+    b = Body(WIDTH/2, HEIGHT/2, 50)
     b2 = Body(WIDTH/4, HEIGHT/4, 50)
     b3 = Body(WIDTH/4+WIDTH/2, HEIGHT/4, 50)
     b4 = Body(WIDTH/4, HEIGHT/4+HEIGHT/2, 50)
