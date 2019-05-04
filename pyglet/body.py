@@ -61,7 +61,7 @@ class BodyManager(object):
                         note_sum+= 1
                     # note_sum is 0-13. We want to get it into the range of 0.0 - 1.0, so...
                     hue = note_sum/13.0
-                    random_hue = hue + (random.randint(-self.random_factor, self.random_factor) / 100.0)
+                    random_hue = hue + (r.randint(-self.random_factor, self.random_factor) / 100.0)
                     self.color = colour.Color(hsl=(random_hue, 1, 0.5))
             elif self.MODE == "MFCC":
                 try:
@@ -106,11 +106,10 @@ class Body(object):
     MAX_MAGNITUDE = 100
     MIN_MAGNITUDE = 10
 
-    def __init__(self, x, y, radius, degree=150):
+    def __init__(self, x, y, radius, degree=150, scanning_max = 360, scanning_min = 0, scanning_mode="CIRCLE"):
         self.x = x
         self.y = y
         self.radius = radius
-        self.degree = degree
         self.rays = []
         self.vertex_list = None
         r_b = [color for color in colour.Color("Red").range_to(colour.Color("Green"), 120)]
@@ -119,6 +118,15 @@ class Body(object):
         self.colors =  r_b+b_g+g_r
         self.energy = 0
         self.energy_color = None
+        self.scanning_max = scanning_max
+        self.scanning_min = scanning_min
+        if degree > self.scanning_max:
+            degree = self.scanning_max
+        elif degree < self.scanning_min:
+            degree = self.scanning_min
+        self.degree = degree
+        self.scanning_mode = scanning_mode
+        #self.scanning_mode_options = ["CIRCLE", "RANDOM"]
 
     def get_color(self):
         return self.colors[int(self.degree)]
@@ -151,9 +159,12 @@ class Body(object):
         if not magnitude:
             magnitude = r.randint(self.MIN_MAGNITUDE, self.MAX_MAGNITUDE)
         self.rays.append(Ray(x_point, y_point, x_point + x_slope, y_point + y_slope, magnitude, color, bounce=bounce, decay=decay))
-        self.degree = self.degree + 1
-        if self.degree == 360:
-            self.degree = 0
+        if self.scanning_mode == "CIRCLE":
+            self.degree = self.degree + 1
+            if self.degree >= self.scanning_max:
+                self.degree = self.scanning_min
+        elif self.scanning_mode == "RANDOM":
+            self.degree = r.randrange(self.scanning_min, self.scanning_max)
 
     def get_vertices_and_colors(self):
         rays = [ray for ray in self.rays] # snapshot
@@ -193,8 +204,8 @@ if __name__ == "__main__":
     # need to get height and width as args
     WIDTH=1280
     HEIGHT=720
-    b = Body(WIDTH/2, HEIGHT/2, 50)
-    b2 = Body(WIDTH/4, HEIGHT/4, 50)
+    b = Body(WIDTH, HEIGHT/2, 100, scanning_min = 110, scanning_max=250)
+    b2 = Body(WIDTH/4, HEIGHT/4, 50, scanning_mode="RANDOM")
     b3 = Body(WIDTH/4+WIDTH/2, HEIGHT/4, 50)
     b4 = Body(WIDTH/4, HEIGHT/4+HEIGHT/2, 50)
     b5 = Body(WIDTH/4+WIDTH/2, HEIGHT/4+HEIGHT/2, 50)
