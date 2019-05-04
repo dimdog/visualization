@@ -14,13 +14,23 @@ class BodyManager(object):
         self.redis.delete("beat_queue") # clears so we don't have a whole history to fight through
         self.threshold = 7
         self.counter = 0
-        self.color = None
-        self.random_factor = 5
         self.MODE = "MFCC+BEAT"
-        self.COLOR_MODE = "TONE"
-        #self.COLOR_MODE = "RANDOM"
         #self.MODE = "BEAT"
         #self.MODE = "MFCC"
+        self.COLOR_MODE = "TONE"
+        #self.COLOR_MODE = "RANDOM"
+        self.color = None
+        self.random_factor = 5
+        self.COLLISION_MODE="ALL"
+        self.COLLISION_MODE="NOTMAIN"
+
+    def get_collision_list(self):
+        collision_list = []
+        if self.COLLISION_MODE == "ALL":
+            collision_list = [self.main_body, *self.bodies]
+        elif self.COLLISION_MODE == "NOTMAIN":
+            collision_list = self.bodies
+        return collision_list
 
     def gen_vertex_list(self):
         ray_coords = []
@@ -32,7 +42,8 @@ class BodyManager(object):
         self.redis.set("vertex_list", "{}|{}".format(ray_coords, ray_colors))
 
     def check_ray_collision(self, ray):
-        for b in [self.main_body, *self.bodies]:
+        collision_list = self.get_collision_list()
+        for b in collision_list:
             distance = sqrt((abs(ray.x2 - b.x) ** 2) + (abs(ray.y2 - b.y) ** 2))
             if distance < b.radius:
                 return b
@@ -73,7 +84,7 @@ class BodyManager(object):
                     while self.counter >= self.threshold:
                         self.main_body.add_ray(color=self.color)
                         self.counter -= self.threshold
-                else:
+                elif not msg.startswith("note:"):
                     count = int(msg)
                     self.counter += count
             msg = self.redis.rpop("beat_queue")
@@ -131,6 +142,8 @@ class Body(object):
             self.degree = degree
         if not color:
             color = self.get_color()
+        else:
+            color = colour.Color(color) # else its just a reference and can change!
         x_slope = (self.radius * cos(radians(self.degree)))/60
         y_slope = (self.radius * sin(radians(self.degree)))/60
         x_point = self.radius * cos(radians(self.degree)) + self.x
