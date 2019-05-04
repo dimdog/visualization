@@ -12,7 +12,7 @@ from body import Body
 WIDTH = 1280
 HEIGHT = 780
 
-window = pyglet.window.Window(WIDTH, HEIGHT, vsync=False)
+window = pyglet.window.Window(WIDTH, HEIGHT)
 
 redis = redis.StrictRedis(host="localhost", port=6379, password="", decode_responses=True)
 

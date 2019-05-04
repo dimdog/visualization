@@ -49,6 +49,8 @@ class AudioProcessor(object):
         self.last_average = 0
         self.colors = None
         self.pitch_range = None
+        self.range_counter = 0
+        self.all_notes = set()
         stream.start_stream()
 
     def reset(self):
@@ -105,7 +107,22 @@ class AudioProcessor(object):
         ret = np.fromstring(in_data, dtype=np.float32)
         ret = ret[0:self.hop_s]
 
-        note = self.a_notes(ret)
+        midi = self.a_notes(ret)[0]
+        if 0 < midi <= 127:
+            note_octave = aubio.midi2note(int(midi))
+            if note_octave != "C-1":
+                note = note_octave[:-1]
+                self.all_notes.add(note)
+                octave = int(note_octave[-1])
+                self.redis.lpush("beat_queue", "note:{}".format(note))
+
+                if octave < 1 or octave > 5:
+                    print("OUTSIDE EXPECTED RANGE\t\t{}".format(note_octave))
+                    print("# in expected range prior:{}".format(self.range_counter))
+                    print(self.all_notes)
+                    self.range_counter = 0
+                else:
+                    self.range_counter+=1
         if self.detect_onset:
             onset = self.a_onset(ret)[0]
             if onset > 0:
@@ -123,7 +140,7 @@ class AudioProcessor(object):
                 val = int(sum(mfcc[1:]))  # first coefficient is a constant?
                 self.redis.lpush("beat_queue", val)
             except:
-                print("NaN?")
+                pass
         if self.detect_beat:
             is_beat = self.a_tempo(ret)
             if is_beat:

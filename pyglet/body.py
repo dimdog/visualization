@@ -14,7 +14,11 @@ class BodyManager(object):
         self.redis.delete("beat_queue") # clears so we don't have a whole history to fight through
         self.threshold = 7
         self.counter = 0
+        self.color = None
+        self.random_factor = 5
         self.MODE = "MFCC+BEAT"
+        self.COLOR_MODE = "TONE"
+        #self.COLOR_MODE = "RANDOM"
         #self.MODE = "BEAT"
         #self.MODE = "MFCC"
 
@@ -39,7 +43,16 @@ class BodyManager(object):
         # listen here for the message
         msg = self.redis.rpop("beat_queue")
         while msg:
-            if self.MODE == "MFCC":
+            if self.COLOR_MODE == "TONE" and msg.startswith("note:"):
+                    note = msg.split("note:")[1]
+                    note_sum = (ord(note[0].lower())-97) * 2
+                    if len(note) > 1: # then it is a sharp
+                        note_sum+= 1
+                    # note_sum is 0-13. We want to get it into the range of 0.0 - 1.0, so...
+                    hue = note_sum/13.0
+                    random_hue = hue + (random.randint(-self.random_factor, self.random_factor) / 100.0)
+                    self.color = colour.Color(hsl=(random_hue, 1, 0.5))
+            elif self.MODE == "MFCC":
                 try:
                     count = int(msg)
                     self.counter += count
@@ -58,7 +71,7 @@ class BodyManager(object):
             elif self.MODE == "MFCC+BEAT":
                 if msg == "Beat":
                     while self.counter >= self.threshold:
-                        self.main_body.add_ray()
+                        self.main_body.add_ray(color=self.color)
                         self.counter -= self.threshold
                 else:
                     count = int(msg)
@@ -118,7 +131,6 @@ class Body(object):
             self.degree = degree
         if not color:
             color = self.get_color()
-        color = self.get_color()
         x_slope = (self.radius * cos(radians(self.degree)))/60
         y_slope = (self.radius * sin(radians(self.degree)))/60
         x_point = self.radius * cos(radians(self.degree)) + self.x
