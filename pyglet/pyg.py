@@ -5,6 +5,8 @@ from pyglet import clock
 import colour
 from math import radians, sin, cos
 import redis
+from panel import control_panel
+import json
 
 from body import Body
 
@@ -28,9 +30,9 @@ def on_draw(*args):
     window.clear()
     msg = redis.get("vertex_list")
     if msg:
-        ray_coords_raw, ray_colors_raw = msg.split("|")
-        ray_coords = eval(ray_coords_raw) # I solemnly swear I am up to no good
-        ray_colors = eval(ray_colors_raw) # I solemnly swear I am up to no good
+        as_json = json.loads(msg)
+        ray_coords = as_json["ray_coords"]
+        ray_colors = as_json["ray_colors"]
         if vlh.vertex_list:
             vlh.vertex_list.delete()
 
@@ -53,6 +55,7 @@ def on_mouse_press(x, y, button, modifiers):
     if button == mouse.LEFT:
         print('The left mouse button was pressed.')
 
+cp_window, cp_window2, cp_gui = control_panel()
 clock.schedule(on_draw)
 pyglet.app.run()
 

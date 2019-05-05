@@ -1,13 +1,13 @@
-pygame
 colour
 pyaudio
-ipython
-pyglet # remove pygame?
-aubio
-#madmom requirements
 numpy
+ipython
+pyglet
+aubio
+redis
+# experimental
+glooey
+# not sure i need the following
 scipy
 cython
-pyaudio
 pyfftw
-redis

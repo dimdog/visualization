@@ -4,12 +4,13 @@ import random
 r = random.Random()
 from ray import Ray
 import redis
+import json
 
 class BodyManager(object):
 
     def __init__(self, main_body, *bodies):
         self.main_body = main_body
-        self.bodies = bodies
+        self.bodies = list(bodies)
         self.redis = redis.StrictRedis(host="localhost", port=6379, password="", decode_responses=True)
         self.redis.delete("beat_queue") # clears so we don't have a whole history to fight through
         self.threshold = 7
@@ -39,7 +40,7 @@ class BodyManager(object):
             ray_coords.extend(b.ray_coords)
             ray_colors.extend(b.ray_colors)
 
-        self.redis.set("vertex_list", "{}|{}".format(ray_coords, ray_colors))
+        self.redis.set("vertex_list", json.dumps({"ray_coords":list(ray_coords),"ray_colors":list(ray_colors)}))
 
     def check_ray_collision(self, ray):
         collision_list = self.get_collision_list()
@@ -49,12 +50,46 @@ class BodyManager(object):
                 return b
         return None
 
+    def reposition_body(self, body, xystr):
+        x, y = xystr.split(",")
+        body.x = int(x)
+        body.y = int(y)
 
     def update_vertex_lists(self, *args):
         # listen here for the message
         msg = self.redis.rpop("beat_queue")
         while msg:
-            if self.COLOR_MODE == "TONE" and msg.startswith("note:"):
+            if msg.startswith("gui:"):
+                if msg.startswith("gui:bodies:setmain:"):
+                    b = self.main_body
+                    new_main_index = int(msg.split(":")[-1])
+                    new_main = self.bodies.pop(new_main_index)
+                    self.bodies.append(b)
+                    self.main_body = new_main
+                    print(self.main_body)
+                    print("changing main body")
+                elif msg.startswith("gui:bodies:setlocation:"):
+                    body, location = msg.split(":")[-2:]
+                    body = int(body)
+                    x,y = [int(t) for t in location.split(",")]
+                    self.main_body.x = x
+                    self.main_body.y = y
+                elif msg.startswith("gui:bodies:setlocations:"):
+                    locations = msg.split(":")[-1]
+                    total_bodies = locations.split("|")
+                    if len(total_bodies) != len(self.bodies) +1:
+                        print("Invalid bodies message")
+                    else:
+                        main_bod = total_bodies[0]
+                        self.reposition_body(self.main_body, main_bod)
+                        for counter,bod in enumerate(total_bodies[1:]):
+                            self.reposition_body(self.bodies[counter], bod)
+                        print("bodies repositioned!")
+
+
+
+
+            elif self.COLOR_MODE == "TONE" and msg.startswith("note:"):
                     note = msg.split("note:")[1]
                     note_sum = (ord(note[0].lower())-97) * 2
                     if len(note) > 1: # then it is a sharp
@@ -127,6 +162,9 @@ class Body(object):
         self.degree = degree
         self.scanning_mode = scanning_mode
         #self.scanning_mode_options = ["CIRCLE", "RANDOM"]
+
+    def __repr__(self):
+        return "<Body x={} y={} radius={}>".format(self.x, self.y, self.radius)
 
     def get_color(self):
         return self.colors[int(self.degree)]
@@ -206,9 +244,9 @@ if __name__ == "__main__":
     HEIGHT=720
     b = Body(WIDTH, HEIGHT/2, 100, scanning_min = 110, scanning_max=250)
     b2 = Body(WIDTH/4, HEIGHT/4, 50, scanning_mode="RANDOM")
-    b3 = Body(WIDTH/4+WIDTH/2, HEIGHT/4, 50)
-    b4 = Body(WIDTH/4, HEIGHT/4+HEIGHT/2, 50)
-    b5 = Body(WIDTH/4+WIDTH/2, HEIGHT/4+HEIGHT/2, 50)
+    b3 = Body(WIDTH/4+WIDTH/2, HEIGHT/4, 50, scanning_mode="RANDOM")
+    b4 = Body(WIDTH/4, HEIGHT/4+HEIGHT/2, 50, scanning_mode="RANDOM")
+    b5 = Body(WIDTH/4+WIDTH/2, HEIGHT/4+HEIGHT/2, 50, scanning_mode="RANDOM")
     bm = BodyManager(b, b2, b3, b4, b5)
     while True:
         bm.update_vertex_lists()
