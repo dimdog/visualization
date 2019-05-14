@@ -42,6 +42,7 @@ class TogglePerformer(glooey.Button):
 
     def __init__(self, text, circles=None):
         super().__init__(text)
+        self.set_image(pyglet.resource.image('circle50.png'))
         self.circles = circles
         [c.add_manager(self) for c in self.circles]
         self.selected = None
@@ -67,6 +68,7 @@ class SaveLocations(glooey.Button):
 
     def __init__(self, text, circles=None):
         super().__init__(text)
+        self.set_image(pyglet.resource.image('circle50.png'))
         self.circles = circles
         [c.add_manager(self) for c in self.circles]
 

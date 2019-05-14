@@ -6,6 +6,9 @@ from ray import Ray
 import redis
 import json
 
+WIDTH=1280
+HEIGHT=720
+
 class BodyManager(object):
 
     def __init__(self, main_body, *bodies):
@@ -103,7 +106,7 @@ class BodyManager(object):
                     count = int(msg)
                     self.counter += count
                     while self.counter >= self.threshold:
-                        self.main_body.add_ray()
+                        self.main_body.add_ray(bounce=True, decay=True)
                         self.counter -= self.threshold
                 except:
                     pass
@@ -240,14 +243,13 @@ class Body(object):
 
 if __name__ == "__main__":
     # need to get height and width as args
-    WIDTH=1280
-    HEIGHT=720
     b = Body(WIDTH, HEIGHT/2, 100, scanning_min = 110, scanning_max=250)
     b2 = Body(WIDTH/4, HEIGHT/4, 50, scanning_mode="RANDOM")
     b3 = Body(WIDTH/4+WIDTH/2, HEIGHT/4, 50, scanning_mode="RANDOM")
     b4 = Body(WIDTH/4, HEIGHT/4+HEIGHT/2, 50, scanning_mode="RANDOM")
     b5 = Body(WIDTH/4+WIDTH/2, HEIGHT/4+HEIGHT/2, 50, scanning_mode="RANDOM")
     bm = BodyManager(b, b2, b3, b4, b5)
+    #bm = BodyManager(b)
     while True:
         bm.update_vertex_lists()
 
