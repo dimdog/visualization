@@ -1,8 +1,9 @@
-from math import sqrt
 import random
+from math import radians, sin, cos, sqrt
 r = random.Random()
 WIDTH=1280
-HEIGHT=720
+HEIGHT=800
+CEILING=0
 
 def scale_color(color):
     rgb_color = color.get_rgb()
@@ -11,33 +12,28 @@ def scale_color(color):
 class Ray(object):
     BOUNCE=True
     GRACE_PERIOD_LENGTH = 7
+    decay_rate=-.005
+    growth_rate=.3
 
-    def __init__(self, x1, y1, x2, y2, magnitude, color1, color2=None, bounce=False, decay=False):
+    def __init__(self, x, y, angle, magnitude, color1, color2=None, bounce=False, decay=False):
         # Colors are expected to colour objects
-        # TODO turn this thing into something that calculates the next "step" based on slope and stepping, instead of pushing the slope...
-        self.decay = decay
-        self.decaying = False
-        self.bounce = bounce
-        self.active = True
-        self.x1 = x1
-        self.y1 = y1
-        self.x2 = x2
-        self.y2 = y2
-        self.magnitude = magnitude
-        self.counter = 0
-        self.x_slope = x2-x1
-        self.y_slope = y2-y1
-        self.new_x_slope = None
-        self.new_y_slope = None
-        self.color1 = color1
-        self.color2 = color2 or color1
+        #debug
         self.marked = True if r.random() > .99 else False
         self.name = str(r.random()*1000)[:4]
-        self.absorbing = False
-        self.bouncing = False
-        #debug
-        self.has_bounced=False
-        self.grace_period = 0
+        # TODO turn this thing into something that calculates the next "step" based on slope and stepping, instead of pushing the slope...
+        self.decay = decay
+        self.bounce = bounce
+        self.x1 = x
+        self.y1 = y
+        self.angle = angle
+        self.x_slope = cos(radians(self.angle))
+        self.y_slope = sin(radians(self.angle))
+        self.x2 = self.x1 + self.x_slope
+        self.y2 = self.y1 + self.y_slope
+        self.magnitude = magnitude
+        self.color1 = color1
+        self.color2 = color2 or color1
+        self.active = True
 
     def __repr__(self):
         return "name:{} ({},{}), ({},{})".format(self.name, self.x1, self.y1, self.x2, self.y2)
@@ -48,56 +44,81 @@ class Ray(object):
     def get_colors(self):
         return (*scale_color(self.color1), *scale_color(self.color2))
 
+    def move_ray(self):
+        # replace this with a formula ffs
+        self.x2+= self.x_slope
+        self.y2+= self.y_slope
+        self.x1+= self.x_slope
+        self.y1+= self.y_slope
 
-    def update(self):
+    def enforce_bounds(self):
+        enforced = False
+        if self.x2 < 0:
+            self.x2 = 0
+            self.y2-=self.y_slope
+            enforced = True
+        elif self.x2 > WIDTH:
+            self.x2 = WIDTH
+            self.y2-=self.y_slope
+            enforced = True
+        if self.y2 < CEILING:
+            self.y2 = CEILING
+            self.x2-=self.x_slope
+            enforced = True
+        elif self.y2 > HEIGHT:
+            self.y2 = HEIGHT
+            self.x2-=self.x_slope
+            enforced = True
+        return enforced
 
-        if not self.absorbing and not self.bouncing:
-            self.x2 = self.x2 + self.x_slope
-            self.y2 = self.y2 + self.y_slope
-        self.x1 = self.x1 + self.x_slope
-        self.y1 = self.y1 + self.y_slope
+    def resize(self):
         current_magnitude = sqrt((abs(self.x2 - self.x1) ** 2) + (abs(self.y2 - self.y1) ** 2))
-        if self.bouncing:
-            if current_magnitude < 1:
-                self.decaying = False
-                self.bouncing = False
-                self.x2 = self.x1
-                self.y2 = self.y1
-                self.x_slope = self.new_x_slope
-                self.y_slope = self.new_y_slope
-        elif self.decaying:
-            rand_factor = r.random() / 2
-            self.x2 = self.x2 - self.x_slope * rand_factor
-            self.y2 = self.y2 - self.y_slope * rand_factor
-            current_magnitude = sqrt((abs(self.x2 - self.x1) ** 2) + (abs(self.y2 - self.y1) ** 2))
-            self.magnitude = current_magnitude
-        elif current_magnitude <= self.magnitude:
-            rand_factor = r.random()
-            self.x2 = self.x2 + self.x_slope * rand_factor
-            self.y2 = self.y2 + self.y_slope * rand_factor
-            rand_factor = r.random() / 3
-            self.x1 = self.x1 + self.x_slope * rand_factor
-            self.y1 = self.y1 + self.y_slope * rand_factor
-        elif current_magnitude  >= self.magnitude and self.decay:
-            self.decaying = True
+        change_rate = self.growth_rate
+        if current_magnitude == self.magnitude:
+            return
+        if current_magnitude > self.magnitude:
+            change_rate = self.decay_rate
+        new_magnitude = min(self.magnitude, current_magnitude + (current_magnitude * change_rate))
+        rand_factor = r.random() / 2
+        self.x2 = self.x2 + self.x_slope * change_rate * rand_factor
+        self.y2 = self.y2 + self.y_slope * change_rate * rand_factor
 
-        if self.decaying and current_magnitude < 1 and not self.bouncing:
+    def decay_ray(self):
+
+        self.magnitude = self.magnitude + (self.magnitude * self.decay_rate)
+        if self.magnitude < 1:
             self.active = False
-        if self.has_bounced and not self.bouncing:
-            self.grace_period-=1
+            return False
+        return True
 
-        if (not 0 < self.x2 <= WIDTH or not 0 < self.y2 <= HEIGHT) and not self.bouncing and self.grace_period <= 0:
+    def bounce_ray(self):
+        # this assumes bounds have already been enforced
+        current_magnitude = sqrt((abs(self.x2 - self.x1) ** 2) + (abs(self.y2 - self.y1) ** 2))
+        if current_magnitude < 0.5:
             if self.BOUNCE and self.bounce: # global rule, then ray specific rule
-                self.grace_period = self.GRACE_PERIOD_LENGTH
-                self.has_bounced = True
-                self.bouncing = True
-                if not 0 < self.x2 <= WIDTH:
-                    self.new_x_slope = - self.x_slope
-                else:
-                    self.new_x_slope = self.x_slope
-                if not 0 < self.y2 <= HEIGHT:
-                    self.new_y_slope = - self.y_slope
-                else:
-                    self.new_y_slope = self.y_slope
+                if self.x2 == WIDTH or self.x2 == 0:
+                    #flip x growth rate
+                    # OLD LOGIC PULL ME OUT
+                    self.x_slope = -self.x_slope
+                elif self.y2 == HEIGHT or self.y2 == CEILING:
+                    #flip y growth rate
+                    # OLD LOGIC PULL ME OUT
+                    self.y_slope = -self.y_slope
             else:
                 self.active = False
+
+
+    def update(self):
+        # decay
+        if not self.decay_ray():
+            return
+        # move
+        self.move_ray()
+        # bounds check
+        if not self.enforce_bounds():
+            # grow / shrink / (TODO)collide
+            self.resize()
+        else:
+            # bounce
+            self.bounce_ray()
+

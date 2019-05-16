@@ -53,7 +53,7 @@ def on_key_press(symbol, modifiers):
 @window.event
 def on_mouse_press(x, y, button, modifiers):
     if button == mouse.LEFT:
-        print('The left mouse button was pressed.')
+        print('The left mouse button was pressed:{},{}'.format(x,y))
 
 cp_window, cp_window2, cp_gui = control_panel()
 clock.schedule(on_draw)

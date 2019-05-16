@@ -135,16 +135,16 @@ class BodyManager(object):
                 if hit_body:
                     # "absorb" a "tick" of the ray TODO
                     ray.active = False # temporary solution
-                    magnitude = sqrt((abs(ray.x2 - ray.x1) ** 2) + (abs(ray.y2 - ray.y1) ** 2))
-                    hit_body.add_energy(magnitude, ray.color1, ray.color2) # another temp solution
+                    hit_body.add_energy(ray.magnitude, ray.color1, ray.color2) # another temp solution
         self.gen_vertex_list()
 
 class Body(object):
 
-    MAX_MAGNITUDE = 100
-    MIN_MAGNITUDE = 10
+    MAX_MAGNITUDE = 500
+    MIN_MAGNITUDE = 100
 
-    def __init__(self, x, y, radius, degree=150, scanning_max = 360, scanning_min = 0, scanning_mode="CIRCLE"):
+    def __init__(self, x, y, radius, degree=150, scanning_max = 360, scanning_min = 0, scanning_mode="CIRCLE", origin="PERIMETER"):
+        #TODO origin = CENTER is broken for rebroadcasting
         self.x = x
         self.y = y
         self.radius = radius
@@ -165,6 +165,8 @@ class Body(object):
         self.degree = degree
         self.scanning_mode = scanning_mode
         #self.scanning_mode_options = ["CIRCLE", "RANDOM"]
+        self.origin = origin
+        #self.origin_modes = ["CENTER", "PERIMETER"]
 
     def __repr__(self):
         return "<Body x={} y={} radius={}>".format(self.x, self.y, self.radius)
@@ -193,13 +195,14 @@ class Body(object):
             color = self.get_color()
         else:
             color = colour.Color(color) # else its just a reference and can change!
-        x_slope = (self.radius * cos(radians(self.degree)))/60
-        y_slope = (self.radius * sin(radians(self.degree)))/60
-        x_point = self.radius * cos(radians(self.degree)) + self.x
-        y_point = self.radius * sin(radians(self.degree)) + self.y
         if not magnitude:
             magnitude = r.randint(self.MIN_MAGNITUDE, self.MAX_MAGNITUDE)
-        self.rays.append(Ray(x_point, y_point, x_point + x_slope, y_point + y_slope, magnitude, color, bounce=bounce, decay=decay))
+        if self.origin=="PERIMETER":
+            x_point = self.radius * cos(radians(self.degree)) + self.x
+            y_point = self.radius * sin(radians(self.degree)) + self.y
+            self.rays.append(Ray(x_point, y_point, self.degree, magnitude, color, bounce=bounce, decay=decay))
+        else:
+            self.rays.append(Ray(self.x, self.y, self.degree, magnitude, color, bounce=bounce, decay=decay))
         if self.scanning_mode == "CIRCLE":
             self.degree = self.degree + 1
             if self.degree >= self.scanning_max:
