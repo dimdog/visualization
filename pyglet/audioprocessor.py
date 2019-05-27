@@ -114,7 +114,9 @@ class AudioProcessor(object):
                 note = note_octave[:-1]
                 self.all_notes.add(note)
                 octave = int(note_octave[-1])
-                self.redis.lpush("beat_queue", "note:{}".format(note))
+                #self.redis.lpush("beat_queue", "note:{}".format(note))
+                ranged_octave = min(max(octave, 1), 5)
+                self.redis.lpush("beat_queue", "noteoctave:{},{}".format(note, ranged_octave))
 
                 if octave < 1 or octave > 5:
                     print("OUTSIDE EXPECTED RANGE\t\t{}".format(note_octave))

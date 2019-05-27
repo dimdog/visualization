@@ -94,10 +94,22 @@ class BodyManager(object):
 
             elif self.COLOR_MODE == "TONE" and msg.startswith("note:"):
                     note = msg.split("note:")[1]
-                    note_sum = (ord(note[0].lower())-97) * 2
+                    note_sum = (ord(note[0].lower())-97) * 2 # Convert ABCDEFG to a number 0-7
                     if len(note) > 1: # then it is a sharp
                         note_sum+= 1
                     # note_sum is 0-13. We want to get it into the range of 0.0 - 1.0, so...
+                    hue = note_sum/13.0
+                    random_hue = hue + (r.randint(-self.random_factor, self.random_factor) / 100.0)
+                    self.color = colour.Color(hsl=(random_hue, 1, 0.5))
+            elif self.COLOR_MODE == "TONE" and msg.startswith("noteoctave:"):
+                    noteoctave = msg.split("noteoctave:")[1]
+                    note, octave = noteoctave.split(",")
+                    note_sum = (ord(note[0].lower())-97) * 2 # Convert ABCDEFG to a number 0-7
+                    if len(note) > 1: # then it is a sharp
+                        note_sum+= 1
+                    # note_sum is 0-13
+                    noteoctave_sum = octave * note_sum
+                    # noteoctave_sum is 0-65. We want to get it into the range of 0.0 - 1.0, so...
                     hue = note_sum/13.0
                     random_hue = hue + (r.randint(-self.random_factor, self.random_factor) / 100.0)
                     self.color = colour.Color(hsl=(random_hue, 1, 0.5))
@@ -246,7 +258,8 @@ class Body(object):
 
 if __name__ == "__main__":
     # need to get height and width as args
-    b = Body(WIDTH, HEIGHT/2, 100, scanning_min = 110, scanning_max=250)
+    #b = Body(WIDTH, HEIGHT/2, 100, scanning_min = 110, scanning_max=250)
+    b = Body(WIDTH/2, HEIGHT/2, 100)
     b2 = Body(WIDTH/4, HEIGHT/4, 50, scanning_mode="RANDOM")
     b3 = Body(WIDTH/4+WIDTH/2, HEIGHT/4, 50, scanning_mode="RANDOM")
     b4 = Body(WIDTH/4, HEIGHT/4+HEIGHT/2, 50, scanning_mode="RANDOM")

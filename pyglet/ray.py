@@ -11,9 +11,8 @@ def scale_color(color):
 
 class Ray(object):
     BOUNCE=True
-    GRACE_PERIOD_LENGTH = 7
-    decay_rate=-.005
-    growth_rate=.3
+    decay_rate=-.001
+    growth_rate=.5
 
     def __init__(self, x, y, angle, magnitude, color1, color2=None, bounce=False, decay=False):
         # Colors are expected to colour objects
