@@ -89,9 +89,6 @@ class BodyManager(object):
                             self.reposition_body(self.bodies[counter], bod)
                         print("bodies repositioned!")
 
-
-
-
             elif self.COLOR_MODE == "TONE" and msg.startswith("note:"):
                     note = msg.split("note:")[1]
                     note_sum = (ord(note[0].lower())-97) * 2 # Convert ABCDEFG to a number 0-7

@@ -31,8 +31,11 @@ def on_draw(*args):
     msg = redis.get("vertex_list")
     if msg:
         as_json = json.loads(msg)
-        ray_coords = as_json["ray_coords"]
-        ray_colors = as_json["ray_colors"]
+        ray_coords = as_json.get("ray_coords", [])
+        ray_colors = as_json.get("ray_colors", [])
+        if not ray_coords:
+            ray_coords = []
+            ray_colors = []
         if vlh.vertex_list:
             vlh.vertex_list.delete()
 

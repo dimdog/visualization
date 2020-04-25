@@ -11,3 +11,8 @@ glooey
 scipy
 cython
 pyfftw
+# streaming video stuff
+opencv-contrib-python
+imutils
+flask
+pychromecast

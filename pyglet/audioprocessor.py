@@ -117,6 +117,7 @@ class AudioProcessor(object):
                 #self.redis.lpush("beat_queue", "note:{}".format(note))
                 ranged_octave = min(max(octave, 1), 5)
                 self.redis.lpush("beat_queue", "noteoctave:{},{}".format(note, ranged_octave))
+                self.redis.publish("beats", "noteoctave:{},{}".format(note, ranged_octave))
 
                 if octave < 1 or octave > 5:
                     print("OUTSIDE EXPECTED RANGE\t\t{}".format(note_octave))
@@ -129,6 +130,7 @@ class AudioProcessor(object):
             onset = self.a_onset(ret)[0]
             if onset > 0:
                 self.redis.lpush("beat_queue", "Beat")
+                self.redis.publish("beats", "Beat")
 
         if self.detect_pitch:
             pitch = self.a_pitch(ret)[0]
@@ -141,6 +143,7 @@ class AudioProcessor(object):
             try:
                 val = int(sum(mfcc[1:]))  # first coefficient is a constant?
                 self.redis.lpush("beat_queue", val)
+                self.redis.publish("beats", val)
             except:
                 pass
         if self.detect_beat:
@@ -149,6 +152,7 @@ class AudioProcessor(object):
                 # TODO send message to add a ray with color (we can always bump this up later)
                 #self.source_body.add_ray(color=self.colors[pitch_index])
                 self.redis.lpush("beat_queue", "Beat")
+                self.redis.publish("beats", "Beat")
                 if self.average_pitch_samples > 0:
                     average_pitch = self.average_pitch / self.average_pitch_samples
                     self.last_average = average_pitch
