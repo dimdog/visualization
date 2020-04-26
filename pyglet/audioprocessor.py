@@ -101,12 +101,7 @@ class AudioProcessor(object):
             if pitch_index < 0:
                 pitch_index = 0
 
-    def callback(self, in_data, frame_count, time_info, status):
-        # dir of a_tempo: ['__call__', '__class__', '__delattr__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', 'buf_size', 'get_bpm', 'get_confidence', 'get_delay', 'get_delay_ms', 'get_delay_s', 'get_last', 'get_last_ms', 'get_last_s', 'get_last_tatum', 'get_period', 'get_period_s', 'get_silence', 'get_threshold', 'hop_size', 'method', 'samplerate', 'set_delay', 'set_delay_ms', 'set_delay_s', 'set_silence', 'set_tatum_signature', 'set_threshold']
-        # pitch is typically in the 0 - 20k range
-        ret = np.fromstring(in_data, dtype=np.float32)
-        ret = ret[0:self.hop_s]
-
+    def process_octave(self, ret):
         midi = self.a_notes(ret)[0]
         if 0 < midi <= 127:
             note_octave = aubio.midi2note(int(midi))
@@ -114,7 +109,6 @@ class AudioProcessor(object):
                 note = note_octave[:-1]
                 self.all_notes.add(note)
                 octave = int(note_octave[-1])
-                #self.redis.lpush("beat_queue", "note:{}".format(note))
                 ranged_octave = min(max(octave, 1), 5)
                 self.redis.lpush("beat_queue", "noteoctave:{},{}".format(note, ranged_octave))
                 self.redis.publish("beats", "noteoctave:{},{}".format(note, ranged_octave))
@@ -126,17 +120,22 @@ class AudioProcessor(object):
                     self.range_counter = 0
                 else:
                     self.range_counter+=1
+
+    def process_onset(self, ret):
         if self.detect_onset:
             onset = self.a_onset(ret)[0]
             if onset > 0:
                 self.redis.lpush("beat_queue", "Beat")
                 self.redis.publish("beats", "Beat")
 
+    def process_pitch(self, ret):
         if self.detect_pitch:
             pitch = self.a_pitch(ret)[0]
             if pitch > 0 and self.a_pitch.get_confidence() > 0:
                 self.average_pitch+=pitch
                 self.average_pitch_samples+=1
+
+    def process_mfcc(self, ret): # power
         if self.detect_mfcc:
             spec = self.a_pvoc(ret)
             mfcc = self.a_mfcc(spec)
@@ -146,6 +145,8 @@ class AudioProcessor(object):
                 self.redis.publish("beats", val)
             except:
                 pass
+
+    def process_beat(self, ret):
         if self.detect_beat:
             is_beat = self.a_tempo(ret)
             if is_beat:
@@ -164,6 +165,18 @@ class AudioProcessor(object):
                 else:
                     pass
                     #print("last Pitch:{} highest Pitch:{} lowest Pitch:{}".format(self.last_average, self.highest_pitch, self.lowest_pitch))
+
+    def callback(self, in_data, frame_count, time_info, status):
+        # pitch is typically in the 0 - 20k range
+        ret = np.fromstring(in_data, dtype=np.float32)
+        ret = ret[0:self.hop_s]
+
+        self.process_octave(ret)
+        self.process_onset(ret)
+        self.process_pitch(ret)
+        self.process_mfcc(ret)
+        self.process_beat(ret)
+
         return (in_data, pyaudio.paContinue)
 
 
