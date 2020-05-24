@@ -8,13 +8,15 @@ import json
 
 WIDTH=1280
 HEIGHT=720
+redishost = "10.0.1.18"
+#redishost = "localhost"
 
 class BodyManager(object):
 
     def __init__(self, main_body, *bodies):
         self.main_body = main_body
         self.bodies = list(bodies)
-        self.redis = redis.StrictRedis(host="localhost", port=6379, password="", decode_responses=True)
+        self.redis = redis.StrictRedis(host=redishost, port=6379, password="", decode_responses=True)
         self.redis.delete("beat_queue") # clears so we don't have a whole history to fight through
         self.threshold = 7
         self.counter = 0

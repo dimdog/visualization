@@ -16,3 +16,4 @@ opencv-contrib-python
 imutils
 flask
 pychromecast
+spleeter

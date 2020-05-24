@@ -4,6 +4,8 @@ import colour
 import numpy as np
 import redis
 
+redishost = "10.0.1.18"
+#redishost = "localhost"
 
 class AudioProcessor(object):
     FORMAT = pyaudio.paFloat32
@@ -19,7 +21,7 @@ class AudioProcessor(object):
     detect_mfcc = True
 
     def __init__(self):
-        self.redis = redis.StrictRedis(host="localhost", port=6379, password="", decode_responses=True)
+        self.redis = redis.StrictRedis(host=redishost, port=6379, password="", decode_responses=True)
         self.p = pyaudio.PyAudio()
         stream = self.p.open(format=self.FORMAT,
                         channels=self.CHANNELS,
