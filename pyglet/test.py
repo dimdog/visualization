@@ -28,6 +28,12 @@ class Shape(object):
     def random_color(self, pallete=palettable.colorbrewer.qualitative.Paired_12, span=12):
         return pallete.colors[random.randrange(0,span)]
 
+
+    def draw(self):
+        pass
+
+class ShapeDrawer(object):
+
     def get_monocolored_arg(self, color, points):
         ret = [*color]
         if points > 1:
@@ -35,34 +41,30 @@ class Shape(object):
                 ret.extend(color)
         return ('c3B', tuple(ret))
 
-    def draw(self):
-        pass
+class Square(ShapeDrawer):
 
-class Square(Shape):
-
-    def get_coords(self, scale):
-        scaled = scale*10
-        center = self.center
-        size = 100+scale
+    def get_coords(self, shape):
+        scaled = shape.scale*10
+        center = shape.center
+        size = 100+shape.scale
         bottom_left = (int(center[0]-size/2), int(center[0]-size/2))
         bottom_right = (bottom_left[0]+size, bottom_left[1])
         top_right = (bottom_left[0]+size, bottom_left[1]+size)
         top_left = (bottom_left[0], bottom_left[1]+size)
         return ('v2i', (*bottom_left, *bottom_right, *top_right, *top_left))
 
-    def draw(self):
+    def draw(self, shape):
         pyglet.graphics.vertex_list(4,
-            self.get_coords(self.scale),
-            self.get_monocolored_arg(self.color, 4)
+            self.get_coords(shape),
+            self.get_monocolored_arg(shape.color, 4)
                      ).draw(pyglet.gl.GL_QUADS)
 
 class ShapeManager(object):
-    def __init__(self, shape=Shape):
-        self.shape = shape
-        self.shapes = [self.shape(1)]
+    def __init__(self):
+        self.shapes = [Shape(1)]
 
     def loop(self):
-        new_shapes = [self.shape(1)]
+        new_shapes = [Shape(1)]
         for sh in self.shapes:
             if sh.scale < 600:
                 sh.scale = sh.scale + 20
@@ -72,13 +74,14 @@ class ShapeManager(object):
 
 class RepeatingShape(object):
 
-    def __init__(self, shape=Square):
-        self.sm = ShapeManager(shape)
+    def __init__(self, drawer=Square):
+        self.sm = ShapeManager()
+        self.drawer = drawer()
 
     def draw(self):
         self.sm.loop()
         for sh in reversed(self.sm.shapes):
-            sh.draw()
+            self.drawer.draw(sh)
 
 rs = RepeatingShape()
 @window.event
