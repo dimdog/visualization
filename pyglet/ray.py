@@ -45,10 +45,10 @@ class Ray(object):
 
     def move_ray(self):
         # replace this with a formula ffs
-        self.x2+= self.x_slope
-        self.y2+= self.y_slope
-        self.x1+= self.x_slope
-        self.y1+= self.y_slope
+        self.x2+= self.x_slope*2
+        self.y2+= self.y_slope*2
+        self.x1+= self.x_slope*2
+        self.y1+= self.y_slope*2
 
     def enforce_bounds(self):
         enforced = False

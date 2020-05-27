@@ -8,8 +8,8 @@ import json
 
 WIDTH=1280
 HEIGHT=720
-redishost = "10.0.1.18"
-#redishost = "localhost"
+#redishost = "10.0.1.18"
+redishost = "localhost"
 
 class BodyManager(object):
 
