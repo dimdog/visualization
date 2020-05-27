@@ -19,18 +19,6 @@ rainbowquad = pyglet.graphics.vertex_list(4,
 
 
 
-class Shape(object):
-    def __init__(self, scale, color = None, center=(400, 400)):
-        self.scale = scale
-        self.color = color or self.random_color()
-        self.center = center
-
-    def random_color(self, pallete=palettable.colorbrewer.qualitative.Paired_12, span=12):
-        return pallete.colors[random.randrange(0,span)]
-
-
-    def draw(self):
-        pass
 
 class ShapeDrawer(object):
 
@@ -58,6 +46,19 @@ class Square(ShapeDrawer):
             self.get_coords(shape),
             self.get_monocolored_arg(shape.color, 4)
                      ).draw(pyglet.gl.GL_QUADS)
+
+class Shape(object):
+    def __init__(self, scale, color = None, center=(400, 400)):
+        self.scale = scale
+        self.color = color or self.random_color()
+        self.center = center
+
+    def random_color(self, pallete=palettable.colorbrewer.qualitative.Paired_12, span=12):
+        return pallete.colors[random.randrange(0,span)]
+
+
+    def draw(self):
+        pass
 
 class ShapeManager(object):
     def __init__(self):
