@@ -20,9 +20,10 @@ rainbowquad = pyglet.graphics.vertex_list(4,
 
 
 class Shape(object):
-    def __init__(self, scale, color = None):
+    def __init__(self, scale, color = None, center=(400, 400)):
         self.scale = scale
         self.color = color or self.random_color()
+        self.center = center
 
     def random_color(self, pallete=palettable.colorbrewer.qualitative.Paired_12, span=12):
         return pallete.colors[random.randrange(0,span)]
@@ -41,7 +42,7 @@ class Square(Shape):
 
     def get_coords(self, scale):
         scaled = scale*10
-        center = (400, 400)
+        center = self.center
         size = 100+scale
         bottom_left = (int(center[0]-size/2), int(center[0]-size/2))
         bottom_right = (bottom_left[0]+size, bottom_left[1])
@@ -63,7 +64,7 @@ class ShapeManager(object):
     def loop(self):
         new_shapes = [self.shape(1)]
         for sh in self.shapes:
-            if sh.scale < 300:
+            if sh.scale < 600:
                 sh.scale = sh.scale + 20
                 new_shapes.append(sh)
         self.shapes = new_shapes
