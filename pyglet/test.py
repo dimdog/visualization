@@ -3,12 +3,7 @@ import webcolors
 import palettable
 import random
 
-
-
 window = pyglet.window.Window(height=800, width=800)
-
-
-
 rainbowquad = pyglet.graphics.vertex_list(4,
     ('v2i', (10, 10,  100, 10, 100, 100, 10, 100)),
     ('c3B', (255, 255, 255,
@@ -16,11 +11,10 @@ rainbowquad = pyglet.graphics.vertex_list(4,
              0, 255, 0,
              255, 0, 0)))
 
-
-
-
-
 class ShapeDrawer(object):
+
+    def __init__(self):
+        self.base_size = 100
 
     def get_monocolored_arg(self, color, points):
         ret = [*color]
@@ -29,16 +23,31 @@ class ShapeDrawer(object):
                 ret.extend(color)
         return ('c3B', tuple(ret))
 
+class Triangle(ShapeDrawer):
+
+    def get_coords(self, shape):
+        center = shape.center
+        size = self.base_size+shape.scale
+        bottom_left = (int(center[0]-size/2), int(center[0]-size/2))
+        bottom_right = (int(center[0]+size/2), int(center[0]-size/2))
+        top = (bottom_left[0]+size, bottom_left[1]+size)
+        return ('v2i', (*bottom_left, *bottom_right, *top))
+
+    def draw(self, shape):
+        pyglet.graphics.vertex_list(3,
+            self.get_coords(shape),
+            self.get_monocolored_arg(shape.color, 3)
+                     ).draw(pyglet.gl.GL_TRIANGLES)
+
 class Square(ShapeDrawer):
 
     def get_coords(self, shape):
-        scaled = shape.scale*10
         center = shape.center
-        size = 100+shape.scale
+        size = self.base_size+shape.scale
         bottom_left = (int(center[0]-size/2), int(center[0]-size/2))
-        bottom_right = (bottom_left[0]+size, bottom_left[1])
-        top_right = (bottom_left[0]+size, bottom_left[1]+size)
-        top_left = (bottom_left[0], bottom_left[1]+size)
+        bottom_right = (int(center[0]+size/2), int(center[0]-size/2))
+        top_left = (int(center[0]-size/2), int(center[0]+size/2))
+        top_right = (int(center[0]+size/2), int(center[0]+size/2))
         return ('v2i', (*bottom_left, *bottom_right, *top_right, *top_left))
 
     def draw(self, shape):
