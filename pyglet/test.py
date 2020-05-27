@@ -40,9 +40,9 @@ class Triangle(ShapeDrawer):
     def get_coords(self, shape):
         center = shape.center
         size = self.base_size+shape.scale
-        bottom_left = (int(center[0]-size/2), int(center[0]-size/2))
-        bottom_right = (int(center[0]+size/2), int(center[0]-size/2))
-        top = (int(center[0]), int(center[0]+size/2))
+        bottom_left = (int(center[0]-size/2), int(center[1]-size/2))
+        bottom_right = (int(center[0]+size/2), int(center[1]-size/2))
+        top = (int(center[0]), int(center[1]+size/2))
         return ('v2i', (*bottom_left, *bottom_right, *top))
 
 
@@ -56,37 +56,35 @@ class Square(ShapeDrawer):
     def get_coords(self, shape):
         center = shape.center
         size = self.base_size+shape.scale
-        bottom_left = (int(center[0]-size/2), int(center[0]-size/2))
-        bottom_right = (int(center[0]+size/2), int(center[0]-size/2))
-        top_left = (int(center[0]-size/2), int(center[0]+size/2))
-        top_right = (int(center[0]+size/2), int(center[0]+size/2))
+        bottom_left = (int(center[0]-size/2), int(center[1]-size/2))
+        bottom_right = (int(center[0]+size/2), int(center[1]-size/2))
+        top_left = (int(center[0]-size/2), int(center[1]+size/2))
+        top_right = (int(center[0]+size/2), int(center[1]+size/2))
         return ('v2i', (*bottom_left, *bottom_right, *top_right, *top_left))
-
-    def draw(self, shape):
-        pyglet.graphics.vertex_list(4,
-            self.get_coords(shape),
-            self.get_monocolored_arg(shape.color, 4)
-                     ).draw(pyglet.gl.GL_QUADS)
 
 class Heart(ShapeDrawer):
 
     def __init__(self):
         super().__init__()
-        self.points = NAN
+        self.points = 6
         self.draw_mode = pyglet.gl.GL_POLYGON
 
     def get_coords(self, shape):
+        #.....5..........3.....
+        #6....................2
+        #..........4...........
+        #......................
+        #..........1...........
+        #4 = c
         center = shape.center
         size = self.base_size+shape.scale
-        top = (int(center[0]), int(center[0]+size/2))
-        return ('v2i', (*bottom_left, *bottom_right, *top_right, *top_left))
-
-    def draw(self, shape):
-        pyglet.graphics.vertex_list(4,
-            self.get_coords(shape),
-            self.get_monocolored_arg(shape.color, 4)
-                     ).draw(pyglet.gl.GL_POLYGON)
-
+        point1 = (int(center[0]), int(center[1]-size/2))
+        point2 = (int(center[0]+size/2), int(center[1]+size/4))
+        point3 = (int(center[0]+size/4), int(center[1]+size/2))
+        point4 = center
+        point5 = (int(center[0]-size/4), int(center[1]+size/2))
+        point6 = (int(center[0]-size/2), int(center[1]+size/4))
+        return ('v2i', (*point1, *point2, *point3, *point4, *point5, *point6))
 
 class Shape(object):
     def __init__(self, scale, color = None, center=(400, 400)):
@@ -97,9 +95,6 @@ class Shape(object):
     def random_color(self, pallete=palettable.colorbrewer.qualitative.Paired_12, span=12):
         return pallete.colors[random.randrange(0,span)]
 
-
-    def draw(self):
-        pass
 
 class ShapeManager(object):
     def __init__(self):
@@ -116,7 +111,7 @@ class ShapeManager(object):
 
 class RepeatingShape(object):
 
-    def __init__(self, drawer=Triangle):
+    def __init__(self, drawer=Heart):
         self.sm = ShapeManager()
         self.drawer = drawer()
         self.drawer2 = Square()
