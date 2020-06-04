@@ -8,10 +8,10 @@ import redis
 import json
 
 config = configparser.ConfigParser()
-config.read('../config.ini')
+print(config.read('config.ini'))
 
-WIDTH=config['DEFAULT']['SCREEN_WIDTH']
-HEIGHT=config['DEFAULT']['SCREEN_HEIGHT']
+WIDTH=int(config['DEFAULT']['SCREEN_WIDTH'])
+HEIGHT=int(config['DEFAULT']['SCREEN_HEIGHT'])
 #redishost = "10.0.1.18"
 redishost = config['DEFAULT']['REDIS_URL']
 

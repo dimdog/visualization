@@ -12,10 +12,10 @@ import json
 from body import Body
 
 config = configparser.ConfigParser()
-config.read('../config.ini')
+config.read('config.ini')
 
-WIDTH=config['DEFAULT']['SCREEN_WIDTH']
-HEIGHT=config['DEFAULT']['SCREEN_HEIGHT']
+WIDTH=int(config['DEFAULT']['SCREEN_WIDTH'])
+HEIGHT=int(config['DEFAULT']['SCREEN_HEIGHT'])
 #redishost = "10.0.1.18"
 redishost = config['DEFAULT']['REDIS_URL']
 
@@ -63,7 +63,7 @@ def on_mouse_press(x, y, button, modifiers):
     if button == mouse.LEFT:
         print('The left mouse button was pressed:{},{}'.format(x,y))
 
-cp_window, cp_window2, cp_gui = control_panel()
+#cp_window, cp_window2, cp_gui = control_panel()
 clock.schedule_interval(on_draw, 0.01)
 pyglet.app.run()
 
