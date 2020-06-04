@@ -1,11 +1,14 @@
 import pyaudio
+import configparser
 import aubio
 import colour
 import numpy as np
 import redis
 
+config = configparser.ConfigParser()
+config.read('config.ini')
 #redishost = "10.0.1.18"
-redishost = "localhost"
+redishost = config['DEFAULT']['REDIS_URL']
 
 class AudioProcessor(object):
     FORMAT = pyaudio.paFloat32
@@ -14,7 +17,7 @@ class AudioProcessor(object):
     CHUNK = 1024
     hop_s = CHUNK // 2  # hop size
     active = None
-    
+
     detect_onset = True
     detect_mfcc = True
 
@@ -105,6 +108,14 @@ class AudioProcessor(object):
         self.process_octave(ret)
         self.process_onset(ret)
         self.process_mfcc(ret)
+        #How loud is it?
+        #What is its pitch?
+        #What is its spectrum?
+        #What frequencies are present?
+        #How loud are the frequencies?
+        #How does the sound change over time?
+        #Where is the sound coming from?
+        #What’s a good guess as to the characteristics of the physical object that made the sound?
 
         return (in_data, pyaudio.paContinue)
 

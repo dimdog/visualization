@@ -10,7 +10,7 @@ def scale_color(color):
     return tuple(int(elem * 255) for elem in rgb_color)
 
 class Ray(object):
-    BOUNCE=True
+    BOUNCE=False
     decay_rate=-.001
     growth_rate=.5
 
@@ -44,31 +44,30 @@ class Ray(object):
         return (*scale_color(self.color1), *scale_color(self.color2))
 
     def move_ray(self):
-        # replace this with a formula ffs
+        # why *2?
         self.x2+= self.x_slope*2
         self.y2+= self.y_slope*2
         self.x1+= self.x_slope*2
         self.y1+= self.y_slope*2
 
     def enforce_bounds(self):
-        enforced = False
         if self.x2 < 0:
             self.x2 = 0
             self.y2-=self.y_slope
-            enforced = True
+            return True
         elif self.x2 > WIDTH:
             self.x2 = WIDTH
             self.y2-=self.y_slope
-            enforced = True
+            return True
         if self.y2 < CEILING:
             self.y2 = CEILING
             self.x2-=self.x_slope
-            enforced = True
+            return True
         elif self.y2 > HEIGHT:
             self.y2 = HEIGHT
             self.x2-=self.x_slope
-            enforced = True
-        return enforced
+            return True
+        return False
 
     def resize(self):
         current_magnitude = sqrt((abs(self.x2 - self.x1) ** 2) + (abs(self.y2 - self.y1) ** 2))

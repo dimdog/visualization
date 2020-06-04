@@ -93,16 +93,6 @@ class AudioProcessor(object):
         g_r = [color for color in colour.Color("Blue").range_to(colour.Color("Red"), int(self.pitch_range/3))]
         self.colors =  r_b+b_g+g_r
 
-    def add_rays(self, *args):
-        # deprecated, but maybe some useful logic in here
-        for i in range(1):
-            pitch_index = int(self.average_pitch - self.lowest_pitch)
-            if pitch_index > len(self.colors):
-                pitch_index = len(self.colors) - 1
-                #print("crap")
-            if pitch_index < 0:
-                pitch_index = 0
-
     def process_octave(self, ret):
         midi = self.a_notes(ret)[0]
         if 0 < midi <= 127:
@@ -129,13 +119,6 @@ class AudioProcessor(object):
             if onset > 0:
                 self.redis.lpush("beat_queue", "Beat")
                 self.redis.publish("beats", "Beat")
-
-    def process_pitch(self, ret):
-        if self.detect_pitch:
-            pitch = self.a_pitch(ret)[0]
-            if pitch > 0 and self.a_pitch.get_confidence() > 0:
-                self.average_pitch+=pitch
-                self.average_pitch_samples+=1
 
     def process_mfcc(self, ret): # power
         if self.detect_mfcc:
@@ -175,7 +158,6 @@ class AudioProcessor(object):
 
         self.process_octave(ret)
         self.process_onset(ret)
-        self.process_pitch(ret)
         self.process_mfcc(ret)
         self.process_beat(ret)
 

@@ -1,4 +1,5 @@
 import colour
+import configparser
 from math import radians, sin, cos, sqrt
 import random
 r = random.Random()
@@ -6,10 +7,13 @@ from ray import Ray
 import redis
 import json
 
-WIDTH=1280
-HEIGHT=720
+config = configparser.ConfigParser()
+config.read('../config.ini')
+
+WIDTH=config['DEFAULT']['SCREEN_WIDTH']
+HEIGHT=config['DEFAULT']['SCREEN_HEIGHT']
 #redishost = "10.0.1.18"
-redishost = "localhost"
+redishost = config['DEFAULT']['REDIS_URL']
 
 class BodyManager(object):
 
@@ -117,7 +121,7 @@ class BodyManager(object):
                     count = int(msg)
                     self.counter += count
                     while self.counter >= self.threshold:
-                        self.main_body.add_ray(bounce=True, decay=True)
+                        self.main_body.add_ray(bounce=False, decay=True)
                         self.counter -= self.threshold
                 except:
                     pass

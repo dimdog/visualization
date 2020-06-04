@@ -1,4 +1,5 @@
 import pyglet
+import configparser
 from pyglet.window import key
 from pyglet.window import mouse
 from pyglet import clock
@@ -10,13 +11,17 @@ import json
 
 from body import Body
 
+config = configparser.ConfigParser()
+config.read('../config.ini')
 
-WIDTH = 1280
-HEIGHT = 780
+WIDTH=config['DEFAULT']['SCREEN_WIDTH']
+HEIGHT=config['DEFAULT']['SCREEN_HEIGHT']
+#redishost = "10.0.1.18"
+redishost = config['DEFAULT']['REDIS_URL']
 
 window = pyglet.window.Window(WIDTH, HEIGHT)
 
-redis = redis.StrictRedis(host="localhost", port=6379, password="", decode_responses=True)
+redis = redis.StrictRedis(host=redishost, port=6379, password="", decode_responses=True)
 
 
 class VertexListHolder:
@@ -59,7 +64,7 @@ def on_mouse_press(x, y, button, modifiers):
         print('The left mouse button was pressed:{},{}'.format(x,y))
 
 cp_window, cp_window2, cp_gui = control_panel()
-clock.schedule(on_draw)
+clock.schedule_interval(on_draw, 0.01)
 pyglet.app.run()
 
 
