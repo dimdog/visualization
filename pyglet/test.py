@@ -2,6 +2,7 @@ import pyglet
 import webcolors
 import palettable
 import random
+import math
 
 window = pyglet.window.Window(height=800, width=800)
 rainbowquad = pyglet.graphics.vertex_list(4,
@@ -24,10 +25,10 @@ class ShapeDrawer(object):
         return ('c3B', tuple(ret))
 
     def draw(self, shape):
-        pyglet.graphics.vertex_list(self.points,
-            self.get_coords(shape),
-            self.get_monocolored_arg(shape.color, self.points)
-                     ).draw(self.draw_mode)
+        coords = self.get_coords(shape)
+        colors = self.get_monocolored_arg(shape.color, int(len(coords[1])/2))
+        pyglet.graphics.vertex_list(int(len(coords[1])/2),
+            coords, colors ).draw(self.draw_mode)
 
 class Triangle(ShapeDrawer):
 
@@ -45,6 +46,25 @@ class Triangle(ShapeDrawer):
         top = (int(center[0]), int(center[1]+size/2))
         return ('v2i', (*bottom_left, *bottom_right, *top))
 
+class Circle(ShapeDrawer):
+
+    def __init__(self):
+        super().__init__()
+        self.base_size = 150
+        self.radius = self.base_size / 2
+        self.points = 365
+        self.draw_mode = pyglet.gl.GL_POLYGON
+
+    def get_coords(self, shape):
+        points = []
+        center = shape.center
+        step = math.ceil(365 / self.points)
+        for i in range(0, 365, step): # should be a range to 365 taking n steps where n is self.points
+            points.append(round(self.radius * math.sin(i),3)+center[0])
+            points.append(round(self.radius * math.cos(i),3)+center[1])
+
+        points = [point for point in points]
+        return ('v2f', tuple(points))
 
 class Square(ShapeDrawer):
 
@@ -111,7 +131,7 @@ class ShapeManager(object):
 
 class RepeatingShape(object):
 
-    def __init__(self, drawer=Heart):
+    def __init__(self, drawer=Circle):
         self.sm = ShapeManager()
         self.drawer = drawer()
         self.drawer2 = Square()
