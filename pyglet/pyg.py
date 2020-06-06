@@ -1,5 +1,6 @@
 import pyglet
 import configparser
+import pathlib
 from pyglet.window import key
 from pyglet.window import mouse
 from pyglet import clock
@@ -11,8 +12,9 @@ import json
 
 from body import Body
 
+parent_dir = pathlib.Path(__file__).parent.parent.absolute()
 config = configparser.ConfigParser()
-config.read('config.ini')
+config.read(parent_dir.joinpath('config.ini'))
 
 WIDTH=int(config['DEFAULT']['SCREEN_WIDTH'])
 HEIGHT=int(config['DEFAULT']['SCREEN_HEIGHT'])

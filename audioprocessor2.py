@@ -4,9 +4,11 @@ import aubio
 import colour
 import numpy as np
 import redis
+import pathlib
 
+my_dir = pathlib.Path(__file__).parent.absolute()
 config = configparser.ConfigParser()
-config.read('config.ini')
+config.read(my_dir.joinpath('config.ini'))
 #redishost = "10.0.1.18"
 redishost = config['DEFAULT']['REDIS_URL']
 

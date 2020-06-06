@@ -1,5 +1,6 @@
 import colour
 import configparser
+import pathlib
 from math import radians, sin, cos, sqrt
 import random
 r = random.Random()
@@ -7,8 +8,9 @@ from ray import Ray
 import redis
 import json
 
+parent_dir = pathlib.Path(__file__).parent.parent.absolute()
 config = configparser.ConfigParser()
-print(config.read('config.ini'))
+print(config.read(parent_dir.joinpath('config.ini')))
 
 WIDTH=int(config['DEFAULT']['SCREEN_WIDTH'])
 HEIGHT=int(config['DEFAULT']['SCREEN_HEIGHT'])
@@ -48,7 +50,6 @@ class BodyManager(object):
         for b in [self.main_body, *self.bodies]:
             ray_coords.extend(b.ray_coords)
             ray_colors.extend(b.ray_colors)
-
         self.redis.set("vertex_list", json.dumps({"ray_coords":list(ray_coords),"ray_colors":list(ray_colors)}))
 
     def check_ray_collision(self, ray):
