@@ -36,6 +36,22 @@ class BodyManager(object):
         self.COLLISION_MODE="ALL"
         self.COLLISION_MODE="NOTMAIN"
 
+    def generate_bodies(n):
+        """ generates n bodies and adds them to self"""
+        not_allowed = [(b.x, b.y, b.radius) for b in [self.main_body, *self.bodies]]
+        for i in range(n):
+            x,y = self.find_legal_coordinates(radius, not_allowed)
+            self.bodies.append(Body(x, y, 50, scanning_mode="RANDOM")
+
+    def find_legal_coordinates(radius, not_allowed):
+        rx = r.randint(0,WIDTH)
+        ry = r.randint(0,HEIGHT)
+        for circ in not_allowed:
+            distance = sqrt((abs(rx - circ[0]) ** 2) + (abs(ry - circ[1]) ** 2))
+            if distance <  circ[2] + radius:
+                return self.find_legal_coordinates(radius, not_allowed)
+        return (rx, ry)
+
     def get_collision_list(self):
         collision_list = []
         if self.COLLISION_MODE == "ALL":
@@ -276,12 +292,13 @@ if __name__ == "__main__":
     # need to get height and width as args
     #b = Body(WIDTH, HEIGHT/2, 100, scanning_min = 110, scanning_max=250)
     b = Body(WIDTH/2, HEIGHT/2, 100)
-    b2 = Body(WIDTH/4, HEIGHT/4, 50, scanning_mode="RANDOM")
-    b3 = Body(WIDTH/4+WIDTH/2, HEIGHT/4, 50, scanning_mode="RANDOM")
-    b4 = Body(WIDTH/4, HEIGHT/4+HEIGHT/2, 50, scanning_mode="RANDOM")
-    b5 = Body(WIDTH/4+WIDTH/2, HEIGHT/4+HEIGHT/2, 50, scanning_mode="RANDOM")
-    bm = BodyManager(b, b2, b3, b4, b5)
-    #bm = BodyManager(b)
+    #b2 = Body(WIDTH/4, HEIGHT/4, 50, scanning_mode="RANDOM")
+    #b3 = Body(WIDTH/4+WIDTH/2, HEIGHT/4, 50, scanning_mode="RANDOM")
+    #b4 = Body(WIDTH/4, HEIGHT/4+HEIGHT/2, 50, scanning_mode="RANDOM")
+    #b5 = Body(WIDTH/4+WIDTH/2, HEIGHT/4+HEIGHT/2, 50, scanning_mode="RANDOM")
+    #bm = BodyManager(b, b2, b3, b4, b5)
+    bm = BodyManager(b)
+    bm.generate_bodies(10)
     while True:
         bm.update_vertex_lists()
 
