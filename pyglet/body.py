@@ -2,17 +2,18 @@ import colour
 import configparser
 from math import radians, sin, cos, sqrt
 import random
-r = random.Random()
-from ray import Ray
 import redis
 import json
 
+from ray import Ray, scale_color
+from shapes import Shape, Circle
+
+r = random.Random()
 config = configparser.ConfigParser()
-print(config.read('config.ini'))
+config.read('config.ini')
 
 WIDTH=int(config['DEFAULT']['SCREEN_WIDTH'])
 HEIGHT=int(config['DEFAULT']['SCREEN_HEIGHT'])
-#redishost = "10.0.1.18"
 redishost = config['DEFAULT']['REDIS_URL']
 
 class BodyManager(object):
@@ -45,11 +46,16 @@ class BodyManager(object):
     def gen_vertex_list(self):
         ray_coords = []
         ray_colors = []
+        circle_array = []
         for b in [self.main_body, *self.bodies]:
+            circle_coords = b.circle.get_coords(b.shape)
+            circle_colors = b.circle.get_monocolored_arg(scale_color(b.lastColor), int(len(circle_coords[1])/2))
+            circle_array.append({"coords": circle_coords, "colors": circle_colors})
             ray_coords.extend(b.ray_coords)
             ray_colors.extend(b.ray_colors)
+        print(len(ray_coords))
 
-        self.redis.set("vertex_list", json.dumps({"ray_coords":list(ray_coords),"ray_colors":list(ray_colors)}))
+        self.redis.set("vertex_list", json.dumps({"ray_coords":list(ray_coords),"ray_colors":list(ray_colors), "circles": circle_array}))
 
     def check_ray_collision(self, ray):
         collision_list = self.get_collision_list()
@@ -163,6 +169,12 @@ class Body(object):
         self.x = x
         self.y = y
         self.radius = radius
+        # for drawing
+        self.colorDict = dict()
+        self.lastColor = colour.Color("Blue")
+        self.shape = Shape(center=(self.x,self.y))
+        self.circle = Circle(self.radius*2)
+        # end drawing section
         self.rays = []
         self.vertex_list = None
         r_b = [color for color in colour.Color("Red").range_to(colour.Color("Green"), 120)]
@@ -210,6 +222,8 @@ class Body(object):
             color = self.get_color()
         else:
             color = colour.Color(color) # else its just a reference and can change!
+        self.colorDict[self.degree] = color
+        self.lastColor = color
         if not magnitude:
             magnitude = r.randint(self.MIN_MAGNITUDE, self.MAX_MAGNITUDE)
         if self.origin=="PERIMETER":

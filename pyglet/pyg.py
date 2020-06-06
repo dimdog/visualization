@@ -9,8 +9,6 @@ import redis
 from panel import control_panel
 import json
 
-from body import Body
-
 config = configparser.ConfigParser()
 config.read('config.ini')
 
@@ -24,12 +22,6 @@ window = pyglet.window.Window(WIDTH, HEIGHT)
 redis = redis.StrictRedis(host=redishost, port=6379, password="", decode_responses=True)
 
 
-class VertexListHolder:
-    def __init__(self, vertex_list):
-        self.vertex_list = vertex_list
-
-vlh = VertexListHolder(None)
-
 @window.event
 def on_draw(*args):
     window.clear()
@@ -38,16 +30,20 @@ def on_draw(*args):
         as_json = json.loads(msg)
         ray_coords = as_json.get("ray_coords", [])
         ray_colors = as_json.get("ray_colors", [])
+        circles = as_json.get("circles", [])
         if not ray_coords:
             ray_coords = []
             ray_colors = []
-        if vlh.vertex_list:
-            vlh.vertex_list.delete()
-
-        vlh.vertex_list = pyglet.graphics.vertex_list(int(len(ray_coords) / 2),
+        vertex_list = pyglet.graphics.vertex_list(int(len(ray_coords) / 2),
                         ('v2f', ray_coords),
                         ('c3B', ray_colors))
-        vlh.vertex_list.draw(pyglet.gl.GL_LINES)
+        vertex_list.draw(pyglet.gl.GL_LINES)
+        for circle in circles:
+            vl = pyglet.graphics.vertex_list(int(len(circle['coords'][1])/2),
+                    tuple(circle['coords']),
+                    tuple(circle['colors']))
+            vl.draw(pyglet.gl.GL_POLYGON)
+
 
 @window.event
 def on_key_press(symbol, modifiers):
