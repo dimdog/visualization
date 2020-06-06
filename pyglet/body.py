@@ -53,7 +53,6 @@ class BodyManager(object):
             circle_array.append({"coords": circle_coords, "colors": circle_colors})
             ray_coords.extend(b.ray_coords)
             ray_colors.extend(b.ray_colors)
-        print(len(ray_coords))
 
         self.redis.set("vertex_list", json.dumps({"ray_coords":list(ray_coords),"ray_colors":list(ray_colors), "circles": circle_array}))
 
