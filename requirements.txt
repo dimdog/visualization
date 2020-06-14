@@ -18,3 +18,5 @@ flask
 pychromecast
 webcolors
 palettable
+flask
+flask-redis
