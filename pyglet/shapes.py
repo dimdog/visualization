@@ -2,6 +2,9 @@ import pyglet
 import webcolors
 import palettable
 import random
+import math
+
+from ray import scale_color
 
 window = pyglet.window.Window(height=800, width=800)
 rainbowquad = pyglet.graphics.vertex_list(4,
@@ -13,8 +16,8 @@ rainbowquad = pyglet.graphics.vertex_list(4,
 
 class ShapeDrawer(object):
 
-    def __init__(self):
-        self.base_size = 100
+    def __init__(self, base_size=100):
+        self.base_size = base_size
 
     def get_monocolored_arg(self, color, points):
         ret = [*color]
@@ -23,17 +26,26 @@ class ShapeDrawer(object):
                 ret.extend(color)
         return ('c3B', tuple(ret))
 
+    def get_colored_arg(self, color, points, color_dict):
+        ret = []
+        for x in range(points):
+            if x in color_dict:
+                ret.extend(scale_color(color_dict[x]))
+            else:
+                ret.extend(color)
+        # this results in some grossness for circles at least
+        return ('c3B', tuple(ret))
+
     def draw(self, shape):
-        pyglet.graphics.vertex_list(self.points,
-            self.get_coords(shape),
-            self.get_monocolored_arg(shape.color, self.points)
-                     ).draw(self.draw_mode)
+        coords = self.get_coords(shape)
+        colors = self.get_monocolored_arg(shape.color, int(len(coords[1])/2))
+        pyglet.graphics.vertex_list(int(len(coords[1])/2),
+            coords, colors ).draw(self.draw_mode)
 
 class Triangle(ShapeDrawer):
 
-    def __init__(self):
-        super().__init__()
-        self.base_size = 150
+    def __init__(self, base_size):
+        super().__init__(base_size)
         self.points = 3
         self.draw_mode = pyglet.gl.GL_TRIANGLES
 
@@ -45,11 +57,29 @@ class Triangle(ShapeDrawer):
         top = (int(center[0]), int(center[1]+size/2))
         return ('v2i', (*bottom_left, *bottom_right, *top))
 
+class Circle(ShapeDrawer):
+
+    def __init__(self, base_size, points=365):
+        super().__init__(base_size)
+        self.radius = self.base_size / 2
+        self.points = points
+        self.draw_mode = pyglet.gl.GL_POLYGON
+
+    def get_coords(self, shape):
+        points = []
+        center = shape.center
+        step = math.ceil(365 / self.points)
+        for i in range(0, 365, step): # should be a range to 365 taking n steps where n is self.points
+            points.append(round(self.radius * math.sin(i),3)+center[0])
+            points.append(round(self.radius * math.cos(i),3)+center[1])
+
+        points = [point for point in points]
+        return ('v2f', tuple(points))
 
 class Square(ShapeDrawer):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, base_size):
+        super().__init__(base_size)
         self.points = 4
         self.draw_mode = pyglet.gl.GL_QUADS
 
@@ -64,8 +94,8 @@ class Square(ShapeDrawer):
 
 class Heart(ShapeDrawer):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, base_size):
+        super().__init__(base_size)
         self.points = 6
         self.draw_mode = pyglet.gl.GL_POLYGON
 
@@ -87,7 +117,7 @@ class Heart(ShapeDrawer):
         return ('v2i', (*point1, *point2, *point3, *point4, *point5, *point6))
 
 class Shape(object):
-    def __init__(self, scale, color = None, center=(400, 400)):
+    def __init__(self, scale=1, color = None, center=(400, 400)):
         self.scale = scale
         self.color = color or self.random_color()
         self.center = center
@@ -98,10 +128,10 @@ class Shape(object):
 
 class ShapeManager(object):
     def __init__(self):
-        self.shapes = [Shape(1)]
+        self.shapes = [Shape()]
 
     def loop(self):
-        new_shapes = [Shape(1)]
+        new_shapes = [Shape()]
         for sh in self.shapes:
             if sh.scale < 800:
                 sh.scale = sh.scale + 20
@@ -111,7 +141,7 @@ class ShapeManager(object):
 
 class RepeatingShape(object):
 
-    def __init__(self, drawer=Heart):
+    def __init__(self, drawer=Circle):
         self.sm = ShapeManager()
         self.drawer = drawer()
         self.drawer2 = Square()
@@ -122,14 +152,14 @@ class RepeatingShape(object):
             #self.drawer2.draw(sh)
             self.drawer.draw(sh)
 
-rs = RepeatingShape()
-@window.event
-def on_draw(*args):
-    window.clear()
-    rs.draw()
 
 
 if __name__ == "__main__":
+    rs = RepeatingShape()
+    @window.event
+    def on_draw(*args):
+        window.clear()
+        rs.draw()
     pyglet.clock.schedule_interval(on_draw, 0.01)
     pyglet.app.run()
 

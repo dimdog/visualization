@@ -1,8 +1,16 @@
 import random
+import configparser
+import pathlib
+
 from math import radians, sin, cos, sqrt
 r = random.Random()
-WIDTH=1280
-HEIGHT=800
+
+parent_dir = pathlib.Path(__file__).parent.parent.absolute()
+config = configparser.ConfigParser()
+config.read(parent_dir.joinpath('config.ini'))
+
+WIDTH=int(config['DEFAULT']['SCREEN_WIDTH'])
+HEIGHT=int(config['DEFAULT']['SCREEN_HEIGHT'])
 CEILING=0
 
 def scale_color(color):
@@ -104,6 +112,7 @@ class Ray(object):
                     self.y_slope = -self.y_slope
             else:
                 self.active = False
+        self.active = False
 
 
     def update(self):

@@ -1,18 +1,20 @@
 import colour
 import configparser
+import pathlib
 from math import radians, sin, cos, sqrt
 import random
-r = random.Random()
-from ray import Ray
 import redis
 import json
-
+from ray import Ray, scale_color
+from shapes import Shape, Circle
+r = random.Random()
+parent_dir = pathlib.Path(__file__).parent.parent.absolute()
 config = configparser.ConfigParser()
-print(config.read('config.ini'))
+config.read(parent_dir.joinpath('config.ini'))
+
 
 WIDTH=int(config['DEFAULT']['SCREEN_WIDTH'])
 HEIGHT=int(config['DEFAULT']['SCREEN_HEIGHT'])
-#redishost = "10.0.1.18"
 redishost = config['DEFAULT']['REDIS_URL']
 
 class BodyManager(object):
@@ -34,6 +36,22 @@ class BodyManager(object):
         self.COLLISION_MODE="ALL"
         self.COLLISION_MODE="NOTMAIN"
 
+    def generate_bodies(n):
+        """ generates n bodies and adds them to self"""
+        not_allowed = [(b.x, b.y, b.radius) for b in [self.main_body, *self.bodies]]
+        for i in range(n):
+            x,y = self.find_legal_coordinates(radius, not_allowed)
+            self.bodies.append(Body(x, y, 50, scanning_mode="RANDOM")
+
+    def find_legal_coordinates(radius, not_allowed):
+        rx = r.randint(0,WIDTH)
+        ry = r.randint(0,HEIGHT)
+        for circ in not_allowed:
+            distance = sqrt((abs(rx - circ[0]) ** 2) + (abs(ry - circ[1]) ** 2))
+            if distance <  circ[2] + radius:
+                return self.find_legal_coordinates(radius, not_allowed)
+        return (rx, ry)
+
     def get_collision_list(self):
         collision_list = []
         if self.COLLISION_MODE == "ALL":
@@ -45,11 +63,14 @@ class BodyManager(object):
     def gen_vertex_list(self):
         ray_coords = []
         ray_colors = []
+        circle_array = []
         for b in [self.main_body, *self.bodies]:
+            circle_coords = b.circle.get_coords(b.shape)
+            circle_colors = b.circle.get_monocolored_arg(scale_color(b.lastColor), int(len(circle_coords[1])/2))
+            circle_array.append({"coords": circle_coords, "colors": circle_colors})
             ray_coords.extend(b.ray_coords)
             ray_colors.extend(b.ray_colors)
-
-        self.redis.set("vertex_list", json.dumps({"ray_coords":list(ray_coords),"ray_colors":list(ray_colors)}))
+        self.redis.set("vertex_list", json.dumps({"ray_coords":list(ray_coords),"ray_colors":list(ray_colors), "circles": circle_array}))
 
     def check_ray_collision(self, ray):
         collision_list = self.get_collision_list()
@@ -163,6 +184,12 @@ class Body(object):
         self.x = x
         self.y = y
         self.radius = radius
+        # for drawing
+        self.colorDict = dict()
+        self.lastColor = colour.Color("Blue")
+        self.shape = Shape(center=(self.x,self.y))
+        self.circle = Circle(self.radius*2)
+        # end drawing section
         self.rays = []
         self.vertex_list = None
         r_b = [color for color in colour.Color("Red").range_to(colour.Color("Green"), 120)]
@@ -210,6 +237,8 @@ class Body(object):
             color = self.get_color()
         else:
             color = colour.Color(color) # else its just a reference and can change!
+        self.colorDict[self.degree] = color
+        self.lastColor = color
         if not magnitude:
             magnitude = r.randint(self.MIN_MAGNITUDE, self.MAX_MAGNITUDE)
         if self.origin=="PERIMETER":
@@ -263,12 +292,13 @@ if __name__ == "__main__":
     # need to get height and width as args
     #b = Body(WIDTH, HEIGHT/2, 100, scanning_min = 110, scanning_max=250)
     b = Body(WIDTH/2, HEIGHT/2, 100)
-    b2 = Body(WIDTH/4, HEIGHT/4, 50, scanning_mode="RANDOM")
-    b3 = Body(WIDTH/4+WIDTH/2, HEIGHT/4, 50, scanning_mode="RANDOM")
-    b4 = Body(WIDTH/4, HEIGHT/4+HEIGHT/2, 50, scanning_mode="RANDOM")
-    b5 = Body(WIDTH/4+WIDTH/2, HEIGHT/4+HEIGHT/2, 50, scanning_mode="RANDOM")
-    bm = BodyManager(b, b2, b3, b4, b5)
-    #bm = BodyManager(b)
+    #b2 = Body(WIDTH/4, HEIGHT/4, 50, scanning_mode="RANDOM")
+    #b3 = Body(WIDTH/4+WIDTH/2, HEIGHT/4, 50, scanning_mode="RANDOM")
+    #b4 = Body(WIDTH/4, HEIGHT/4+HEIGHT/2, 50, scanning_mode="RANDOM")
+    #b5 = Body(WIDTH/4+WIDTH/2, HEIGHT/4+HEIGHT/2, 50, scanning_mode="RANDOM")
+    #bm = BodyManager(b, b2, b3, b4, b5)
+    bm = BodyManager(b)
+    bm.generate_bodies(10)
     while True:
         bm.update_vertex_lists()
 
