@@ -1,5 +1,10 @@
 from flask import Flask, request, make_response, abort, send_from_directory
 from flask_redis import FlaskRedis
+import configparser
+import pathlib
+parent_dir = pathlib.Path(__file__).parent.parent.absolute()
+config = configparser.ConfigParser()
+print(config.read(parent_dir.joinpath('config.ini')))
 
 import os
 import json
@@ -8,11 +13,8 @@ redis_client = FlaskRedis()
 
 def create_app(outreach_existing=None, SQLALCHEMY_DATABASE_URI=None, **kwargs):
     app = Flask(__name__)
-    for key in ["LINKEDIN_BUCKET", "BUCKET_NAME", "OUTREACH_CLIENT_ID", "OUTREACH_CLIENT_SECRET_ID", "CELERY_BROKER_URL", "CELERY_RESULT_BACKEND", "REDIS_URL", "GOOGLE_CLIENT_ID", "GOOGLE_SECRET_ID"]:
-        if key in os.environ:
-            app.config[key] = os.environ[key]
-        else:
-            app.config[key] = "TESTING"
+    app.config["REDIS_URL"] = "redis://{}".format(config["DEFAULT"]["REDIS_URL"])
+    print(app.config)
     redis_client.init_app(app)
     if "FLASK_SECRET_KEY" in os.environ:
         app.secret_key = os.environ["FLASK_SECRET_KEY"]
