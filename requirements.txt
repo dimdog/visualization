@@ -9,12 +9,7 @@ redis
 glooey
 # not sure i need the following
 scipy
-cython
-pyfftw
-# streaming video stuff
 opencv-contrib-python
-imutils
-flask
-pychromecast
 webcolors
 palettable
+sounddevice
