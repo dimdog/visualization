@@ -25,16 +25,6 @@ class AudioProcessor(object):
 
     def __init__(self):
         self.redis = redis.StrictRedis(host=redishost, port=6379, password="", decode_responses=True)
-        self.p = pyaudio.PyAudio()
-        stream = self.p.open(format=self.FORMAT,
-                        channels=self.CHANNELS,
-                        rate=self.RATE,
-                        input=True,
-                        output=True,
-                        input_device_index = self.get_input_device_index(),
-                        output_device_index = self.get_output_device_index(),
-                        frames_per_buffer = self.CHUNK,
-                        stream_callback=self.callback)
 
         self.a_onset = aubio.onset("default", self.CHUNK, self.hop_s, self.RATE)
         self.a_tempo = aubio.tempo("specflux", self.CHUNK, self.hop_s, self.RATE)
@@ -48,6 +38,19 @@ class AudioProcessor(object):
         self.colors = None
         self.range_counter = 0
         self.all_notes = set()
+        self.start_stream()
+
+    def start_stream(self):
+        self.p = pyaudio.PyAudio()
+        stream = self.p.open(format=self.FORMAT,
+                        channels=self.CHANNELS,
+                        rate=self.RATE,
+                        input=True,
+                        output=True,
+                        input_device_index = self.get_input_device_index(),
+                        output_device_index = self.get_output_device_index(),
+                        frames_per_buffer = self.CHUNK,
+                        stream_callback=self.callback)
         stream.start_stream()
 
 
