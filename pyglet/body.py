@@ -36,16 +36,17 @@ class BodyManager(object):
         self.COLLISION_MODE="ALL"
         self.COLLISION_MODE="NOTMAIN"
 
-    def generate_bodies(n):
+    def generate_bodies(self, n):
         """ generates n bodies and adds them to self"""
         not_allowed = [(b.x, b.y, b.radius) for b in [self.main_body, *self.bodies]]
         for i in range(n):
-            x,y = self.find_legal_coordinates(radius, not_allowed)
-            self.bodies.append(Body(x, y, 50, scanning_mode="RANDOM")
+            x,y = self.find_legal_coordinates(50, not_allowed)
+            self.bodies.append(Body(x, y, 50, scanning_mode="RANDOM"))
 
-    def find_legal_coordinates(radius, not_allowed):
-        rx = r.randint(0,WIDTH)
-        ry = r.randint(0,HEIGHT)
+    def find_legal_coordinates(self, radius, not_allowed):
+        rx = r.randint(radius,WIDTH-radius)
+        ry = r.randint(radius,HEIGHT-radius)
+
         for circ in not_allowed:
             distance = sqrt((abs(rx - circ[0]) ** 2) + (abs(ry - circ[1]) ** 2))
             if distance <  circ[2] + radius:
@@ -88,7 +89,7 @@ class BodyManager(object):
     def update_vertex_lists(self, *args):
         # listen here for the message
         msg = self.redis.rpop("beat_queue")
-        while msg:
+        if msg is not None:
             if msg.startswith("gui:"):
                 if msg.startswith("gui:bodies:setmain:"):
                     b = self.main_body
@@ -161,7 +162,7 @@ class BodyManager(object):
                 elif not msg.startswith("note:"):
                     count = int(msg)
                     self.counter += count
-            msg = self.redis.rpop("beat_queue")
+                    print(self.counter)
 
         for b in [self.main_body, *self.bodies]:
             b.update_vertex_list()
@@ -298,7 +299,7 @@ if __name__ == "__main__":
     #b5 = Body(WIDTH/4+WIDTH/2, HEIGHT/4+HEIGHT/2, 50, scanning_mode="RANDOM")
     #bm = BodyManager(b, b2, b3, b4, b5)
     bm = BodyManager(b)
-    bm.generate_bodies(10)
+    bm.generate_bodies(15)
     while True:
         bm.update_vertex_lists()
 
