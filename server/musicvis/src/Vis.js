@@ -37,7 +37,7 @@ export const Vis = (props) => {
                     }
                     // save lines and handle them
                 });
-  });
+  }, []);
   useEffect(() => {
       var renderer = new THREE.WebGLRenderer();
       renderer.setSize( window.innerWidth, window.innerHeight );
