@@ -17,8 +17,8 @@ export const Vis = (props) => {
       return new THREE.Line( geometry, mat );
   }
   useEffect(() => {
-      const newGlCircles = { ...glCirles};
-      const existingGlCircles = { ...glCirles};
+      const newGlCircles = { ...glCircles};
+      const existingGlCircles = { ...glCircles};
       for (const circle of circles){
           if (circle.id in newGlCircles){
               newGlCircles[circle.id].material = circleMaterials[circle.color];
@@ -27,7 +27,7 @@ export const Vis = (props) => {
               const material = circleMaterials[circle.color];
               const geometry = circleGeometries[circle.radius];
               newGlCircles[circle.id] = new THREE.Mesh(geometry, material);
-              newGLCircles[circle.id].position.set(...circle.origin);
+              newGlCircles[circle.id].position.set(...circle.origin);
           }
       }
       for (const circle of existingGlCircles){
@@ -55,9 +55,6 @@ export const Vis = (props) => {
                         setCircleMaterials(newCircleMaterials);
                     }
                     if ("circles" in result){
-                        console.log(result);
-                        for (const cicle of result.circles){
-                        }
                         setCircles(result.circles);
                     }
                     // save lines and handle them
@@ -69,10 +66,6 @@ export const Vis = (props) => {
       //var material = new THREE.LineBasicMaterial( { color: 0x0000ff } );
       //const line = getLine(new THREE.Vector3( - 10, 0, 0 ), new THREE.Vector3( 0, 10, 0 ), material);
       //scene.add( line );
-      for (const circle of circles){
-          console.log(circle);
-          scene.add(getCircle(circle)); // TODO
-      }
       renderer.render( scene, camera );
   });
 
