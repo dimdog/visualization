@@ -4,7 +4,7 @@ import * as THREE from 'three';
 
 
 export const Vis = (props) => {
-  const [circles, setCircles] = useState([{radius: 100, origin:[0, 0, 0], color: "#32a8a4"}]);
+  const [circles, setCircles] = useState([{radius: 100, origin:[0, 0, 0], color: "#32a8a4", "id": 1}]);
   const [circleMaterials, setCircleMaterials] = useState({"#32a8a4": new THREE.MeshBasicMaterial({color: "#32a8a4"})});
   const [renderer, setRenderer] = useState(new THREE.WebGLRenderer());
   const [camera, setCamera] = useState(new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 3000 ));
@@ -28,17 +28,17 @@ export const Vis = (props) => {
               const geometry = circleGeometries[circle.radius];
               newGlCircles[circle.id] = new THREE.Mesh(geometry, material);
               newGlCircles[circle.id].position.set(...circle.origin);
+	      scene.add(newGlCircles[circle.id]);
           }
       }
-      for (const circle of existingGlCircles){
-          scene.remove(circle)
-          circle.dispose();
+      for (const id of Object.keys(existingGlCircles)){
+          scene.remove(existingGlCircles[id]);
       }
       setGlCircles(newGlCircles);
   }, [circles]);
   useEffect(() => {
       renderer.setSize( window.innerWidth, window.innerHeight );
-      camera.position.set( 0, 0, 2000 );
+      camera.position.set( 0, 0, 1000 );
       camera.lookAt( 0, 0, 0 );
       document.body.appendChild( renderer.domElement );
   }, []);
