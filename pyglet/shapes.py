@@ -6,7 +6,6 @@ import math
 
 from ray import scale_color
 
-window = pyglet.window.Window(height=800, width=800)
 rainbowquad = pyglet.graphics.vertex_list(4,
     ('v2i', (10, 10,  100, 10, 100, 100, 10, 100)),
     ('c3B', (255, 255, 255,
@@ -155,6 +154,7 @@ class RepeatingShape(object):
 
 
 if __name__ == "__main__":
+    window = pyglet.window.Window(height=800, width=800)
     rs = RepeatingShape()
     @window.event
     def on_draw(*args):

@@ -35,6 +35,8 @@ class BodyManager(object):
         self.random_factor = 5
         self.COLLISION_MODE="ALL"
         self.COLLISION_MODE="NOTMAIN"
+        self.GRAPHICS_MODE="WEB"
+        #self.GRAPHICS_MODE="PYGLET"
 
     def generate_bodies(self, n):
         """ generates n bodies and adds them to self"""
@@ -62,16 +64,34 @@ class BodyManager(object):
         return collision_list
 
     def gen_vertex_list(self):
-        ray_coords = []
-        ray_colors = []
-        circle_array = []
-        for b in [self.main_body, *self.bodies]:
-            circle_coords = b.circle.get_coords(b.shape)
-            circle_colors = b.circle.get_monocolored_arg(scale_color(b.lastColor), int(len(circle_coords[1])/2))
-            circle_array.append({"coords": circle_coords, "colors": circle_colors})
-            ray_coords.extend(b.ray_coords)
-            ray_colors.extend(b.ray_colors)
-        self.redis.set("vertex_list", json.dumps({"ray_coords":list(ray_coords),"ray_colors":list(ray_colors), "circles": circle_array}))
+        if self.GRAPHICS_MODE == "PYGLET":
+            ray_coords = []
+            ray_colors = []
+            circle_array = []
+            for b in [self.main_body, *self.bodies]:
+                circle_coords = b.circle.get_coords(b.shape)
+                circle_colors = b.circle.get_monocolored_arg(scale_color(b.lastColor), int(len(circle_coords[1])/2))
+                circle_array.append({"coords": circle_coords, "colors": circle_colors})
+                ray_coords.extend(b.ray_coords)
+                ray_colors.extend(b.ray_colors)
+            self.redis.set("vertex_list", json.dumps({"ray_coords":list(ray_coords),"ray_colors":list(ray_colors), "circles": circle_array}))
+        elif self.GRAPHICS_MODE == "WEB":
+            circleColors = set()
+            lineColors = set()
+            circles = []
+            rays = []
+            for b in [self.main_body, *self.bodies]:
+                circleColors.add(b.lastColor.hex_l)
+                circles.append({"radius": b.radius, "origin": [b.x, b.y, 0], "color": b.lastColor.hex_l})
+                for ray in b.rays:
+                    if ray.active:
+                        lineColors.add(ray.color1.hex_l)
+                        rays.append({"p1": [ray.x1, ray.y1, 0], "p2": [ray.x2, ray.y2, 0], "color": ray.color1.hex_l})
+            self.redis.set("geometry", json.dumps({"circleColors": list(circleColors),
+                                             "lineColors": list(lineColors),
+                                             "circles": circles,
+                                             "rays": rays
+                                            }))
 
     def check_ray_collision(self, ray):
         collision_list = self.get_collision_list()
