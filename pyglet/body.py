@@ -1,4 +1,5 @@
 import colour
+import uuid
 import configparser
 import pathlib
 from math import radians, sin, cos, sqrt
@@ -82,11 +83,11 @@ class BodyManager(object):
             rays = []
             for b in [self.main_body, *self.bodies]:
                 circleColors.add(b.lastColor.hex_l)
-                circles.append({"radius": b.radius, "origin": [b.x, b.y, 0], "color": b.lastColor.hex_l})
+                circles.append({"radius": b.radius, "origin": [b.x-WIDTH/2, b.y-HEIGHT/2, 0], "color": b.lastColor.hex_l, "id": b.uuid})
                 for ray in b.rays:
                     if ray.active:
                         lineColors.add(ray.color1.hex_l)
-                        rays.append({"p1": [ray.x1, ray.y1, 0], "p2": [ray.x2, ray.y2, 0], "color": ray.color1.hex_l})
+                        rays.append({"p1": [ray.x1-WIDTH/2, ray.y1-HEIGHT/2, 0], "p2": [ray.x2-WIDTH/2, ray.y2-HEIGHT/2, 0], "color": ray.color1.hex_l, "id":ray.uuid})
             self.redis.set("geometry", json.dumps({"circleColors": list(circleColors),
                                              "lineColors": list(lineColors),
                                              "circles": circles,
@@ -202,6 +203,7 @@ class Body(object):
 
     def __init__(self, x, y, radius, degree=150, scanning_max = 360, scanning_min = 0, scanning_mode="CIRCLE", origin="PERIMETER"):
         #TODO origin = CENTER is broken for rebroadcasting
+        self.uuid = str(uuid.uuid4())
         self.x = x
         self.y = y
         self.radius = radius

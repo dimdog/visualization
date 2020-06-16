@@ -1,6 +1,7 @@
 import random
 import configparser
 import pathlib
+import uuid
 
 from math import radians, sin, cos, sqrt
 r = random.Random()
@@ -24,6 +25,7 @@ class Ray(object):
 
     def __init__(self, x, y, angle, magnitude, color1, color2=None, bounce=False, decay=False):
         # Colors are expected to colour objects
+        self.uuid = str(uuid.uuid4())
         #debug
         self.marked = True if r.random() > .99 else False
         self.name = str(r.random()*1000)[:4]

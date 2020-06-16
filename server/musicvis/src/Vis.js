@@ -9,19 +9,33 @@ export const Vis = (props) => {
   const [renderer, setRenderer] = useState(new THREE.WebGLRenderer());
   const [camera, setCamera] = useState(new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 3000 ));
   const [scene, setScene] = useState(new THREE.Scene());
+  const [circleGeometries, setCircleGeometries] = useState({ 50: new THREE.CircleGeometry(50, 128), 100: new THREE.CircleGeometry(100, 256)});
+  const [glCircles, setGlCircles] = useState({});
 
   function getLine(v1, v2, mat){
       var geometry = new THREE.BufferGeometry().setFromPoints( [v1, v2] );
       return new THREE.Line( geometry, mat );
   }
-  function getCircle(circle){
-      const material = circleMaterials[circle.color];
-      const geometry = new THREE.CircleGeometry( circle.radius, 64 );
-      const glCircle =  new THREE.Mesh( geometry, material );
-      glCircle.position.set( ...circle.origin);
-      return glCircle;
-
-  }
+  useEffect(() => {
+      const newGlCircles = { ...glCirles};
+      const existingGlCircles = { ...glCirles};
+      for (const circle of circles){
+          if (circle.id in newGlCircles){
+              newGlCircles[circle.id].material = circleMaterials[circle.color];
+              delete existingGlCircles[circle.id];
+          } else {
+              const material = circleMaterials[circle.color];
+              const geometry = circleGeometries[circle.radius];
+              newGlCircles[circle.id] = new THREE.Mesh(geometry, material);
+              newGLCircles[circle.id].position.set(...circle.origin);
+          }
+      }
+      for (const circle of existingGlCircles){
+          scene.remove(circle)
+          circle.dispose();
+      }
+      setGlCircles(newGlCircles);
+  }, [circles]);
   useEffect(() => {
       renderer.setSize( window.innerWidth, window.innerHeight );
       camera.position.set( 0, 0, 2000 );
@@ -42,6 +56,8 @@ export const Vis = (props) => {
                     }
                     if ("circles" in result){
                         console.log(result);
+                        for (const cicle of result.circles){
+                        }
                         setCircles(result.circles);
                     }
                     // save lines and handle them
@@ -55,7 +71,7 @@ export const Vis = (props) => {
       //scene.add( line );
       for (const circle of circles){
           console.log(circle);
-          scene.add(getCircle(circle));
+          scene.add(getCircle(circle)); // TODO
       }
       renderer.render( scene, camera );
   });
