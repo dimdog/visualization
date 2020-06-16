@@ -5,7 +5,7 @@ import * as THREE from 'three';
 
 export const Vis = (props) => {
   const greeting = 'Hello Function Component!';
-  const [data, setData] = useState({circles: [{radius: 20, origin:[5,0,0], color: "#32a8a4"}]});
+  const [circles, setCircles] = useState([{radius: 20, origin:[5,0,0], color: "#32a8a4"}]);
   const [circleMaterials, setCircleMaterials] = useState({"#32a8a4": new THREE.MeshBasicMaterial({color: "#32a8a4"})});
 
   function getLine(v1, v2, mat){
@@ -25,8 +25,17 @@ export const Vis = (props) => {
         .then(res => res.json()) // todo fix the bug if the response isn't json parsable
             .then(
                 (result) => {
-                    // iterate through colors list and make new materials
-                    // save data
+                    if ("circleColors" in result){
+                        var newCircleMaterials = { ...circleMaterials };
+                        for (const color of result.circleColors){
+                            newCircleMaterials[color] = new THREE.MeshBasicMaterial({color: color});
+                        }
+                        setCircleMaterials(newCircleMaterials);
+                    }
+                    if ("circles" in result){
+                        setCircles(result.circles);
+                    }
+                    // save lines and handle them
                 });
   });
   useEffect(() => {
@@ -42,7 +51,7 @@ export const Vis = (props) => {
       //create a blue LineBasicMaterial
       var material = new THREE.LineBasicMaterial( { color: 0x0000ff } );
       const line = getLine(new THREE.Vector3( - 10, 0, 0 ), new THREE.Vector3( 0, 10, 0 ), material);
-      for (const circle of data.circles){
+      for (const circle of circles){
           scene.add(getCircle(circle));
       }
       scene.add( line );
