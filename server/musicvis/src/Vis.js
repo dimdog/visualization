@@ -4,7 +4,6 @@ import * as THREE from 'three';
 
 
 export const Vis = (props) => {
-  const greeting = 'Hello Function Component!';
   const [circles, setCircles] = useState([{radius: 20, origin:[5,0,0], color: "#32a8a4"}]);
   const [circleMaterials, setCircleMaterials] = useState({"#32a8a4": new THREE.MeshBasicMaterial({color: "#32a8a4"})});
 
@@ -21,6 +20,7 @@ export const Vis = (props) => {
 
   }
   useEffect(() => {
+      console.log("running");
       fetch("/geometry")
         .then(res => res.json()) // todo fix the bug if the response isn't json parsable
             .then(
