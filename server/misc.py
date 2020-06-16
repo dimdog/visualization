@@ -6,4 +6,9 @@ bp = Blueprint('misc', __name__)
 
 @bp.route("/geometry")
 def queue_count():
-    return Response(redis_client.get("geometry").decode(), mimetype="application/json")
+    geo = redis_client.get("geometry") 
+    if geo:
+        geo = geo.decode()
+    else:
+        geo = {}
+    return Response(geo, mimetype="application/json")

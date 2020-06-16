@@ -4,14 +4,11 @@ import * as THREE from 'three';
 
 
 export const Vis = (props) => {
-  const [circles, setCircles] = useState([{radius: 20, origin:[5,0,0], color: "#32a8a4"}]);
+  const [circles, setCircles] = useState([{radius: 100, origin:[0, 0, 0], color: "#32a8a4"}]);
   const [circleMaterials, setCircleMaterials] = useState({"#32a8a4": new THREE.MeshBasicMaterial({color: "#32a8a4"})});
-  var renderer = new THREE.WebGLRenderer();
-  renderer.setSize( window.innerWidth, window.innerHeight );
-  document.body.appendChild( renderer.domElement );
-  var camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 500 );
-  camera.position.set( 0, 0, 100 );
-  camera.lookAt( 0, 0, 0 );
+  const [renderer, setRenderer] = useState(new THREE.WebGLRenderer());
+  const [camera, setCamera] = useState(new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 3000 ));
+  const [scene, setScene] = useState(new THREE.Scene());
 
   function getLine(v1, v2, mat){
       var geometry = new THREE.BufferGeometry().setFromPoints( [v1, v2] );
@@ -26,6 +23,12 @@ export const Vis = (props) => {
 
   }
   useEffect(() => {
+      renderer.setSize( window.innerWidth, window.innerHeight );
+      camera.position.set( 0, 0, 2000 );
+      camera.lookAt( 0, 0, 0 );
+      document.body.appendChild( renderer.domElement );
+  }, []);
+  useEffect(() => {
       fetch("/geometry")
         .then(res => res.json()) // todo fix the bug if the response isn't json parsable
             .then(
@@ -38,6 +41,7 @@ export const Vis = (props) => {
                         setCircleMaterials(newCircleMaterials);
                     }
                     if ("circles" in result){
+                        console.log(result);
                         setCircles(result.circles);
                     }
                     // save lines and handle them
@@ -45,15 +49,14 @@ export const Vis = (props) => {
   }, []);
   useEffect(() => {
 
-
-      var scene = new THREE.Scene();
       //create a blue LineBasicMaterial
-      var material = new THREE.LineBasicMaterial( { color: 0x0000ff } );
-      const line = getLine(new THREE.Vector3( - 10, 0, 0 ), new THREE.Vector3( 0, 10, 0 ), material);
+      //var material = new THREE.LineBasicMaterial( { color: 0x0000ff } );
+      //const line = getLine(new THREE.Vector3( - 10, 0, 0 ), new THREE.Vector3( 0, 10, 0 ), material);
+      //scene.add( line );
       for (const circle of circles){
+          console.log(circle);
           scene.add(getCircle(circle));
       }
-      scene.add( line );
       renderer.render( scene, camera );
   });
 
