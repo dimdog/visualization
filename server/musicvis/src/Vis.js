@@ -42,7 +42,7 @@ export const Vis = (props) => {
                     if ("rays" in result){
                         setRays(result.rays);
                     }
-                    //getData(); enable when ready!
+                    getData();
                 });
   }
   function getLine(v1, v2, mat){
@@ -111,6 +111,5 @@ export const Vis = (props) => {
   });
 
   return <div />;
-  //return <h1>{greeting}</h1>;
 }
 
