@@ -6,6 +6,12 @@ import * as THREE from 'three';
 export const Vis = (props) => {
   const [circles, setCircles] = useState([{radius: 20, origin:[5,0,0], color: "#32a8a4"}]);
   const [circleMaterials, setCircleMaterials] = useState({"#32a8a4": new THREE.MeshBasicMaterial({color: "#32a8a4"})});
+  var renderer = new THREE.WebGLRenderer();
+  renderer.setSize( window.innerWidth, window.innerHeight );
+  document.body.appendChild( renderer.domElement );
+  var camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 500 );
+  camera.position.set( 0, 0, 100 );
+  camera.lookAt( 0, 0, 0 );
 
   function getLine(v1, v2, mat){
       var geometry = new THREE.BufferGeometry().setFromPoints( [v1, v2] );
@@ -20,7 +26,6 @@ export const Vis = (props) => {
 
   }
   useEffect(() => {
-      console.log("running");
       fetch("/geometry")
         .then(res => res.json()) // todo fix the bug if the response isn't json parsable
             .then(
@@ -39,13 +44,7 @@ export const Vis = (props) => {
                 });
   }, []);
   useEffect(() => {
-      var renderer = new THREE.WebGLRenderer();
-      renderer.setSize( window.innerWidth, window.innerHeight );
-      document.body.appendChild( renderer.domElement );
 
-      var camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 500 );
-      camera.position.set( 0, 0, 100 );
-      camera.lookAt( 0, 0, 0 );
 
       var scene = new THREE.Scene();
       //create a blue LineBasicMaterial
