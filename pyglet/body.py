@@ -183,7 +183,6 @@ class BodyManager(object):
                 elif not msg.startswith("note:"):
                     count = int(msg)
                     self.counter += count
-                    print(self.counter)
 
         for b in [self.main_body, *self.bodies]:
             b.update_vertex_list()

@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import * as THREE from 'three';
 
-
-
 export const Vis = (props) => {
     // edit these to not have setters
   const renderer = useState(new THREE.WebGLRenderer())[0];
