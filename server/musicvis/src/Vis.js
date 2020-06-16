@@ -34,7 +34,16 @@ export const Vis = (props) => {
                     if ("circles" in result){
                         setCircles(result.circles);
                     }
-                    // save lines and handle them
+                    if ("lineColors" in result){
+                        var newRayMaterials = { ...rayMaterials };
+                        for (const color of result.lineColors){
+                            newRayMaterials[color] = new THREE.LineBasicMaterial({color: color});
+                        }
+                        setRayMaterials(newRayMaterials);
+                    }
+                    if ("rays" in result){
+                        setRays(result.rays);
+                    }
                     //getData(); enable when ready!
                 });
   }
