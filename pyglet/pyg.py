@@ -29,8 +29,7 @@ redis = redis.StrictRedis(host=redishost, port=6379, password="", decode_respons
 @window.event
 def on_draw(*args):
     window.clear()
-    msg = redis.get("vertex_list")
-    print(msg)
+    msg = redis.rpop("vertex_list")
     if msg:
         as_json = json.loads(msg)
         ray_coords = as_json.get("ray_coords", [])

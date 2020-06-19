@@ -75,7 +75,7 @@ class BodyManager(object):
                 circle_array.append({"coords": circle_coords, "colors": circle_colors})
                 ray_coords.extend(b.ray_coords)
                 ray_colors.extend(b.ray_colors)
-            self.redis.set("vertex_list", json.dumps({"ray_coords":list(ray_coords),"ray_colors":list(ray_colors), "circles": circle_array}))
+            self.redis.lpush("vertex_list", json.dumps({"ray_coords":list(ray_coords),"ray_colors":list(ray_colors), "circles": circle_array}))
         elif self.GRAPHICS_MODE == "WEB":
             circleColors = set()
             lineColors = set()
@@ -88,7 +88,7 @@ class BodyManager(object):
                     if ray.active:
                         lineColors.add(ray.color1.hex_l)
                         rays.append({"p1": [ray.x1-WIDTH/2, ray.y1-HEIGHT/2, 0], "p2": [ray.x2-WIDTH/2, ray.y2-HEIGHT/2, 0], "color": ray.color1.hex_l, "id":ray.uuid})
-            self.redis.set("geometry", json.dumps({"circleColors": list(circleColors),
+            self.redis.lpush("geometry", json.dumps({"circleColors": list(circleColors),
                                              "lineColors": list(lineColors),
                                              "circles": circles,
                                              "rays": rays
