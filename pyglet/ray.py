@@ -92,7 +92,6 @@ class Ray(object):
         self.y2 = self.y2 + self.y_slope * change_rate * rand_factor
 
     def decay_ray(self):
-
         self.magnitude = self.magnitude + (self.magnitude * self.decay_rate)
         if self.magnitude < 1:
             self.active = False
@@ -105,12 +104,8 @@ class Ray(object):
         if current_magnitude < 0.5:
             if self.BOUNCE and self.bounce: # global rule, then ray specific rule
                 if self.x2 == WIDTH or self.x2 == 0:
-                    #flip x growth rate
-                    # OLD LOGIC PULL ME OUT
                     self.x_slope = -self.x_slope
                 elif self.y2 == HEIGHT or self.y2 == CEILING:
-                    #flip y growth rate
-                    # OLD LOGIC PULL ME OUT
                     self.y_slope = -self.y_slope
             else:
                 self.active = False
