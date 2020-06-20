@@ -21,6 +21,46 @@ HEIGHT=int(config['DEFAULT']['SCREEN_HEIGHT'])
 redishost = config['DEFAULT']['REDIS_URL']
 window = pyglet.window.Window(WIDTH, HEIGHT)
 
+class AudioReceiver(object):
+
+    def __init__(self, graphics):
+        self.redis = redis.StrictRedis(host=redishost, port=6379, password="", decode_responses=True)
+        self.redis.delete("beat_queue") # clears so we don't have a whole history to fight through
+        self.graphics = graphics
+
+    def poll(self, *args):
+        # listen here for the message
+        msg = self.redis.rpop("beat_queue")
+        color = None
+        count = 0
+        if msg is not None:
+            if msg.startswith("note:"):
+                    note = msg.split("note:")[1]
+                    note_sum = (ord(note[0].lower())-97) * 2 # Convert ABCDEFG to a number 0-7
+                    if len(note) > 1: # then it is a sharp
+                        note_sum+= 1
+                    # note_sum is 0-13. We want to get it into the range of 0.0 - 1.0, so...
+                    hue = note_sum/13.0
+                    random_hue = hue + (r.randint(-self.random_factor, self.random_factor) / 100.0)
+                    color = colour.Color(hsl=(random_hue, 1, 0.5))
+            elif msg.startswith("noteoctave:"):
+                    noteoctave = msg.split("noteoctave:")[1]
+                    note, octave = noteoctave.split(",")
+                    note_sum = (ord(note[0].lower())-97) * 2 # Convert ABCDEFG to a number 0-7
+                    if len(note) > 1: # then it is a sharp
+                        note_sum+= 1
+                    # note_sum is 0-13
+                    noteoctave_sum = octave * note_sum
+                    # noteoctave_sum is 0-65. We want to get it into the range of 0.0 - 1.0, so...
+                    hue = note_sum/13.0
+                    random_hue = hue + (r.randint(-self.random_factor, self.random_factor) / 100.0)
+                    color = colour.Color(hsl=(random_hue, 1, 0.5))
+            elif not msg.startswith("note:"):
+                count = int(msg)
+        self.graphics.add_energy_to_system(count, color)
+
+
+
 class BodyManager(object):
 
     def __init__(self, main_body, *bodies):
@@ -31,31 +71,26 @@ class BodyManager(object):
         self.threshold = 7
         self.counter = 0
         self.MODE = "MFCC+BEAT"
-        #self.MODE = "BEAT"
-        #self.MODE = "MFCC"
-        self.COLOR_MODE = "TONE"
-        #self.COLOR_MODE = "RANDOM"
         self.color = None
         self.random_factor = 5
         self.COLLISION_MODE="ALL"
         self.COLLISION_MODE="NOTMAIN"
-        self.GRAPHICS_MODE="WEB"
-        self.GRAPHICS_MODE="PYGLET"
 
     def generate_bodies(self, n):
         """ generates n bodies and adds them to self"""
         not_allowed = [(b.x, b.y, b.radius) for b in [self.main_body, *self.bodies]]
         for i in range(n):
-            x,y = self.find_legal_coordinates(50, not_allowed)
-            self.bodies.append(Body(x, y, 50, scanning_mode="RANDOM"))
+            x,y = self.find_legal_coordinates(20, not_allowed)
+            self.bodies.append(Body(x, y, 20, scanning_mode="RANDOM"))
 
     def find_legal_coordinates(self, radius, not_allowed):
-        rx = r.randint(radius,WIDTH-radius)
-        ry = r.randint(radius,HEIGHT-radius)
+        buff = 20
+        rx = r.randint(radius+buff,WIDTH-(radius+buff))
+        ry = r.randint(radius+buff,HEIGHT-(radius+buff))
 
         for circ in not_allowed:
             distance = sqrt((abs(rx - circ[0]) ** 2) + (abs(ry - circ[1]) ** 2))
-            if distance <  circ[2] + radius:
+            if distance <  circ[2] + radius+buff:
                 return self.find_legal_coordinates(radius, not_allowed)
         return (rx, ry)
 
@@ -68,44 +103,24 @@ class BodyManager(object):
         return collision_list
 
     @window.event
-    def gen_vertex_list(self):
-        if self.GRAPHICS_MODE == "PYGLET":
-            ray_coords = []
-            ray_colors = []
-            circle_array = []
-            for b in [self.main_body, *self.bodies]:
-                circle_coords = b.circle.get_coords(b.shape)
-                circle_colors = b.circle.get_monocolored_arg(scale_color(b.lastColor), int(len(circle_coords[1])/2))
-                circle_array.append({"coords": circle_coords, "colors": circle_colors})
-                ray_coords.extend(b.ray_coords)
-                ray_colors.extend(b.ray_colors)
-            window.clear()
-            vertex_list = pyglet.graphics.vertex_list(int(len(ray_coords) / 2),
-                                                      ('v2f', ray_coords),
-                                                      ('c3B', ray_colors))
-            vertex_list.draw(pyglet.gl.GL_LINES)
-            for circle in circle_array:
-                vl = pyglet.graphics.vertex_list(int(len(circle['coords'][1]) / 2),
-                                                 tuple(circle['coords']),
-                                                 tuple(circle['colors']))
-                vl.draw(pyglet.gl.GL_POLYGON)
-        elif self.GRAPHICS_MODE == "WEB":
-            circleColors = set()
-            lineColors = set()
-            circles = []
-            rays = []
-            for b in [self.main_body, *self.bodies]:
-                circleColors.add(b.lastColor.hex_l)
-                circles.append({"radius": b.radius, "origin": [b.x-WIDTH/2, b.y-HEIGHT/2, 0], "color": b.lastColor.hex_l, "id": b.uuid})
-                for ray in b.rays:
-                    if ray.active:
-                        lineColors.add(ray.color1.hex_l)
-                        rays.append({"p1": [ray.x1-WIDTH/2, ray.y1-HEIGHT/2, 0], "p2": [ray.x2-WIDTH/2, ray.y2-HEIGHT/2, 0], "color": ray.color1.hex_l, "id":ray.uuid})
-            self.redis.lpush("geometry", json.dumps({"circleColors": list(circleColors),
-                                             "lineColors": list(lineColors),
-                                             "circles": circles,
-                                             "rays": rays
-                                            }))
+    def draw(self):
+        window.clear()
+        ray_coords = []
+        ray_colors = []
+        for b in [self.main_body, *self.bodies]:
+            circle_coords = b.circle.get_coords(b.shape)
+            circle_colors = b.circle.get_monocolored_arg(scale_color(b.lastColor), int(len(circle_coords[1])/2))
+            vl = pyglet.graphics.vertex_list(int(len(circle_coords[1]) / 2),
+                                             tuple(circle_coords),
+                                             tuple(circle_colors))
+            vl.draw(pyglet.gl.GL_POLYGON)
+
+            ray_coords.extend(b.ray_coords)
+            ray_colors.extend(b.ray_colors)
+        vertex_list = pyglet.graphics.vertex_list(int(len(ray_coords) / 2),
+                                                  ('v2f', ray_coords),
+                                                  ('c3B', ray_colors))
+        vertex_list.draw(pyglet.gl.GL_LINES)
 
     def check_ray_collision(self, ray):
         collision_list = self.get_collision_list()
@@ -115,88 +130,15 @@ class BodyManager(object):
                 return b
         return None
 
-    def reposition_body(self, body, xystr):
-        x, y = xystr.split(",")
-        body.x = int(x)
-        body.y = int(y)
+    def add_energy_to_system(self, amount, color):
+        self.counter += amount
+        self.color = color if color else self.color
+        while self.counter >= self.threshold:
+            self.main_body.add_ray(color=self.color)
+            self.counter -= self.threshold
+        self.update_vertex_lists()
 
     def update_vertex_lists(self, *args):
-        # listen here for the message
-        msg = self.redis.rpop("beat_queue")
-        if msg is not None:
-            if msg.startswith("gui:"):
-                if msg.startswith("gui:bodies:setmain:"):
-                    b = self.main_body
-                    new_main_index = int(msg.split(":")[-1])
-                    new_main = self.bodies.pop(new_main_index)
-                    self.bodies.append(b)
-                    self.main_body = new_main
-                    print(self.main_body)
-                    print("changing main body")
-                elif msg.startswith("gui:bodies:setlocation:"):
-                    body, location = msg.split(":")[-2:]
-                    body = int(body)
-                    x,y = [int(t) for t in location.split(",")]
-                    self.main_body.x = x
-                    self.main_body.y = y
-                elif msg.startswith("gui:bodies:setlocations:"):
-                    locations = msg.split(":")[-1]
-                    total_bodies = locations.split("|")
-                    if len(total_bodies) != len(self.bodies) +1:
-                        print("Invalid bodies message")
-                    else:
-                        main_bod = total_bodies[0]
-                        self.reposition_body(self.main_body, main_bod)
-                        for counter,bod in enumerate(total_bodies[1:]):
-                            self.reposition_body(self.bodies[counter], bod)
-                        print("bodies repositioned!")
-
-            elif self.COLOR_MODE == "TONE" and msg.startswith("note:"):
-                    note = msg.split("note:")[1]
-                    note_sum = (ord(note[0].lower())-97) * 2 # Convert ABCDEFG to a number 0-7
-                    if len(note) > 1: # then it is a sharp
-                        note_sum+= 1
-                    # note_sum is 0-13. We want to get it into the range of 0.0 - 1.0, so...
-                    hue = note_sum/13.0
-                    random_hue = hue + (r.randint(-self.random_factor, self.random_factor) / 100.0)
-                    self.color = colour.Color(hsl=(random_hue, 1, 0.5))
-            elif self.COLOR_MODE == "TONE" and msg.startswith("noteoctave:"):
-                    noteoctave = msg.split("noteoctave:")[1]
-                    note, octave = noteoctave.split(",")
-                    note_sum = (ord(note[0].lower())-97) * 2 # Convert ABCDEFG to a number 0-7
-                    if len(note) > 1: # then it is a sharp
-                        note_sum+= 1
-                    # note_sum is 0-13
-                    noteoctave_sum = octave * note_sum
-                    # noteoctave_sum is 0-65. We want to get it into the range of 0.0 - 1.0, so...
-                    hue = note_sum/13.0
-                    random_hue = hue + (r.randint(-self.random_factor, self.random_factor) / 100.0)
-                    self.color = colour.Color(hsl=(random_hue, 1, 0.5))
-            elif self.MODE == "MFCC":
-                try:
-                    count = int(msg)
-                    self.counter += count
-                    while self.counter >= self.threshold:
-                        self.main_body.add_ray(bounce=False, decay=True)
-                        self.counter -= self.threshold
-                except:
-                    pass
-            elif self.MODE == "BEAT":
-                if msg == "BEAT":
-                    self.main_body.add_ray()
-                    self.main_body.add_ray()
-                    self.main_body.add_ray()
-                    self.main_body.add_ray()
-                    self.main_body.add_ray()
-            elif self.MODE == "MFCC+BEAT":
-                if msg == "Beat":
-                    while self.counter >= self.threshold:
-                        self.main_body.add_ray(color=self.color)
-                        self.counter -= self.threshold
-                elif not msg.startswith("note:"):
-                    count = int(msg)
-                    self.counter += count
-
         for b in [self.main_body, *self.bodies]:
             b.update_vertex_list()
             for ray in b.rays:
@@ -206,7 +148,7 @@ class BodyManager(object):
                     # "absorb" a "tick" of the ray TODO
                     ray.active = False # temporary solution
                     hit_body.add_energy(ray.magnitude, ray.color1, ray.color2) # another temp solution
-        self.gen_vertex_list()
+        self.draw()
 
 class Body(object):
 
@@ -334,7 +276,8 @@ if __name__ == "__main__":
     #bm = BodyManager(b, b2, b3, b4, b5)
     bm = BodyManager(b)
     bm.generate_bodies(15)
-    clock.schedule_interval(bm.update_vertex_lists, 0.01)
+    ar = AudioReceiver(bm)
+    clock.schedule_interval(ar.poll, 0.01)
     pyglet.app.run()
 
 
