@@ -4,7 +4,6 @@ import configparser
 import pathlib
 from math import radians, sin, cos, sqrt
 import random
-import redis
 import json
 from ray import Ray, scale_color
 from shapes import Shape, Circle
@@ -14,51 +13,8 @@ r = random.Random()
 parent_dir = pathlib.Path(__file__).parent.parent.absolute()
 config = configparser.ConfigParser()
 config.read(parent_dir.joinpath('config.ini'))
-
-
 WIDTH=int(config['DEFAULT']['SCREEN_WIDTH'])
 HEIGHT=int(config['DEFAULT']['SCREEN_HEIGHT'])
-redishost = config['DEFAULT']['REDIS_URL']
-window = pyglet.window.Window(WIDTH, HEIGHT)
-
-class AudioReceiver(object):
-
-    def __init__(self, graphics):
-        self.redis = redis.StrictRedis(host=redishost, port=6379, password="", decode_responses=True)
-        self.redis.delete("beat_queue") # clears so we don't have a whole history to fight through
-        self.graphics = graphics
-
-    def poll(self, *args):
-        # listen here for the message
-        msg = self.redis.rpop("beat_queue")
-        color = None
-        count = 0
-        if msg is not None:
-            if msg.startswith("note:"):
-                    note = msg.split("note:")[1]
-                    note_sum = (ord(note[0].lower())-97) * 2 # Convert ABCDEFG to a number 0-7
-                    if len(note) > 1: # then it is a sharp
-                        note_sum+= 1
-                    # note_sum is 0-13. We want to get it into the range of 0.0 - 1.0, so...
-                    hue = note_sum/13.0
-                    random_hue = hue + (r.randint(-self.random_factor, self.random_factor) / 100.0)
-                    color = colour.Color(hsl=(random_hue, 1, 0.5))
-            elif msg.startswith("noteoctave:"):
-                    noteoctave = msg.split("noteoctave:")[1]
-                    note, octave = noteoctave.split(",")
-                    note_sum = (ord(note[0].lower())-97) * 2 # Convert ABCDEFG to a number 0-7
-                    if len(note) > 1: # then it is a sharp
-                        note_sum+= 1
-                    # note_sum is 0-13
-                    noteoctave_sum = octave * note_sum
-                    # noteoctave_sum is 0-65. We want to get it into the range of 0.0 - 1.0, so...
-                    hue = note_sum/13.0
-                    random_hue = hue + (r.randint(-self.random_factor, self.random_factor) / 100.0)
-                    color = colour.Color(hsl=(random_hue, 1, 0.5))
-            elif not msg.startswith("note:"):
-                count = int(msg)
-        self.graphics.add_energy_to_system(count, color)
-
 
 
 class BodyManager(object):
@@ -66,8 +22,6 @@ class BodyManager(object):
     def __init__(self, main_body, *bodies):
         self.main_body = main_body
         self.bodies = list(bodies)
-        self.redis = redis.StrictRedis(host=redishost, port=6379, password="", decode_responses=True)
-        self.redis.delete("beat_queue") # clears so we don't have a whole history to fight through
         self.threshold = 7
         self.counter = 0
         self.MODE = "MFCC+BEAT"
@@ -102,26 +56,6 @@ class BodyManager(object):
             collision_list = self.bodies
         return collision_list
 
-    @window.event
-    def draw(self):
-        window.clear()
-        ray_coords = []
-        ray_colors = []
-        for b in [self.main_body, *self.bodies]:
-            circle_coords = b.circle.get_coords(b.shape)
-            circle_colors = b.circle.get_monocolored_arg(scale_color(b.lastColor), int(len(circle_coords[1])/2))
-            vl = pyglet.graphics.vertex_list(int(len(circle_coords[1]) / 2),
-                                             tuple(circle_coords),
-                                             tuple(circle_colors))
-            vl.draw(pyglet.gl.GL_POLYGON)
-
-            ray_coords.extend(b.ray_coords)
-            ray_colors.extend(b.ray_colors)
-        vertex_list = pyglet.graphics.vertex_list(int(len(ray_coords) / 2),
-                                                  ('v2f', ray_coords),
-                                                  ('c3B', ray_colors))
-        vertex_list.draw(pyglet.gl.GL_LINES)
-
     def check_ray_collision(self, ray):
         collision_list = self.get_collision_list()
         for b in collision_list:
@@ -148,7 +82,6 @@ class BodyManager(object):
                     # "absorb" a "tick" of the ray TODO
                     ray.active = False # temporary solution
                     hit_body.add_energy(ray.magnitude, ray.color1, ray.color2) # another temp solution
-        self.draw()
 
 class Body(object):
 
@@ -267,13 +200,7 @@ class Body(object):
 
 if __name__ == "__main__":
     # need to get height and width as args
-    #b = Body(WIDTH, HEIGHT/2, 100, scanning_min = 110, scanning_max=250)
     b = Body(WIDTH/2, HEIGHT/2, 100)
-    #b2 = Body(WIDTH/4, HEIGHT/4, 50, scanning_mode="RANDOM")
-    #b3 = Body(WIDTH/4+WIDTH/2, HEIGHT/4, 50, scanning_mode="RANDOM")
-    #b4 = Body(WIDTH/4, HEIGHT/4+HEIGHT/2, 50, scanning_mode="RANDOM")
-    #b5 = Body(WIDTH/4+WIDTH/2, HEIGHT/4+HEIGHT/2, 50, scanning_mode="RANDOM")
-    #bm = BodyManager(b, b2, b3, b4, b5)
     bm = BodyManager(b)
     bm.generate_bodies(15)
     ar = AudioReceiver(bm)
